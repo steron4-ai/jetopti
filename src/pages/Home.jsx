@@ -1848,7 +1848,8 @@ export default function Home() {
             {error && <div className="error-message">⚠️ {error}</div>}
 
             <form onSubmit={handleDirectBooking}>
-              <label htmlFor="booking-from">Startflughafen</label>
+              {/* STARTFLUGHAFEN – Fixiert auf Jet-Standort */}
+<label htmlFor="booking-from">Startflughafen</label>
 <input
   id="booking-from"
   type="text"
@@ -1858,8 +1859,34 @@ export default function Home() {
     backgroundColor: "#f3f4f6",
     cursor: "not-allowed",
     borderColor: "#d1d5db",
+    marginBottom: "15px",
   }}
 />
+
+{/* ZIELFLUGHAFEN – Kunde kann frei wählen */}
+<label htmlFor="booking-to">Zielflughafen</label>
+<input
+  id="booking-to"
+  type="text"
+  name="to"
+  placeholder="z.B. Dubai (DXB) oder New York (JFK)"
+  value={formatAirportLabel(formData.to)}
+  onChange={handleChange}
+  autoComplete="off"
+  list="to-airports"
+  required
+  style={{ marginBottom: "0px" }}
+/>
+
+{/* Autocomplete-Liste für Zielflughafen */}
+<datalist id="to-airports">
+  {getSuggestions(formData.to).map((a) => (
+    <option key={a.iata} value={a.iata}>
+      {a.city} ({a.iata})
+    </option>
+  ))}
+</datalist>
+
 
 
 
