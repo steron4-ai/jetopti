@@ -689,8 +689,17 @@ export default function Home() {
       el.style.height = "55px";
       el.style.cursor = "pointer";
 
-      const statusColor =
+                 const statusColor =
         jet.status === "in_flight" ? "#6366f1" : "#10b981";
+
+      // ✨ NEU: Route-Zeile, falls Jet eine aktive Route hat
+      const routeLine =
+        jet.flight_from_iata &&
+        jet.flight_to_iata
+          ? `<div style="margin-top: 4px; font-size: 0.9rem; color: #111;">
+               🛫 ${jet.flight_from_iata} → ${jet.flight_to_iata}
+             </div>`
+          : "";
 
       const popupHtml = `
         <div style="font-family: system-ui, sans-serif; text-align: center;">
@@ -702,6 +711,7 @@ export default function Home() {
             <span style="color: ${getJetColor(jet.type)}; font-weight: 600;">
               ${jet.type}${jet.year_built ? ` (${jet.year_built})` : ""}
             </span><br/>
+            ${routeLine}
             <small style="color: #333;">
               ${jet.current_iata} • ${jet.seats} Sitze • ${jet.range} km
             </small><br/>
@@ -714,6 +724,8 @@ export default function Home() {
           </div>
         </div>
       `;
+
+
 
       const popup = new mapboxgl.Popup({
         offset: 25,

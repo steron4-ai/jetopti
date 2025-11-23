@@ -1001,3 +1001,8 @@ button {
     padding-top: 0; /* Remove extra padding if navbar fixed */
   }
 }
+.step-icon img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}

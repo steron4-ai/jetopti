@@ -1011,14 +1011,16 @@ export default function Dashboard() {
       if (bookingError) throw bookingError;
 
       // 4. Jet-Status auf "gebucht" setzen
+            // 4. Jet-Status auf "gebucht" setzen + aktuelle Route speichern
       const { error: jetStatusError } = await supabase
-  .from('jets')
-  .update({ 
-    status: 'gebucht',
-    flight_from_iata: booking.from_iata,
-    flight_to_iata: booking.to_iata
-  })
-  .eq('id', booking.jet_id);
+        .from('jets')
+        .update({
+          status: 'gebucht',
+          flight_from_iata: booking.from_iata || booking.from_location || null,
+          flight_to_iata: booking.to_iata || booking.to_location || null,
+        })
+        .eq('id', booking.jet_id);
+
 
       if (jetStatusError) throw jetStatusError;
       console.log('✅ Jet-Status auf "gebucht" gesetzt');
@@ -1232,11 +1234,12 @@ Two
       if (error) throw error;
       
       // 3. ✨ Jet-Status UND Position zurücksetzen
-      const jetUpdateData = { 
-  status: 'verfügbar',
-  flight_from_iata: null,
-  flight_to_iata: null
-};
+            const jetUpdateData = { 
+        status: 'verfügbar',
+        flight_from_iata: null,
+        flight_to_iata: null,
+      };
+
 
 if (destAirport) {
   jetUpdateData.current_iata = destAirport.iata;
@@ -1287,10 +1290,15 @@ if (destAirport) {
 
       console.log('[OK] Buchung auf "cancelled" gesetzt');
 
-      const { error: jetError } = await supabase
+          const { error: jetError } = await supabase
         .from('jets')
-        .update({ status: 'verfügbar' })
+        .update({
+          status: 'verfügbar',
+          flight_from_iata: null,
+          flight_to_iata: null,
+        })
         .eq('id', booking.jet_id);
+
       if (jetError) throw jetError;
 
       console.log('[OK] Jet zurück auf "verfügbar" gesetzt');
