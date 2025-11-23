@@ -1561,15 +1561,16 @@ export default function Home() {
               <label htmlFor="smart-from">Startflughafen</label>
 <div style={{ position: "relative" }}>
   <input
-    id="smart-from"
-    type="text"
-    name="from"
-    placeholder="z.B. FRA oder Frankfurt"
-    value={formData.from}
-    onChange={handleChange}
-    autoComplete="off"
-    required
-  />
+  id="smart-from"
+  type="text"
+  name="from"
+  placeholder="z.B. FRA oder Frankfurt"
+  value={formatAirportLabel(formData.from)}
+  onChange={handleChange}
+  autoComplete="off"
+  required
+/>
+
 
   {fromSuggestions.length > 0 && (
     <div
@@ -1614,15 +1615,16 @@ export default function Home() {
               <label htmlFor="smart-to">Zielflughafen</label>
 <div style={{ position: "relative" }}>
   <input
-    id="smart-to"
-    type="text"
-    name="to"
-    placeholder="z.B. MUC oder München"
-    value={formData.to}
-    onChange={handleChange}
-    autoComplete="off"
-    required
-  />
+  id="smart-to"
+  type="text"
+  name="to"
+  placeholder="z.B. MUC oder München"
+  value={formatAirportLabel(formData.to)}
+  onChange={handleChange}
+  autoComplete="off"
+  required
+/>
+
 
   {toSuggestions.length > 0 && (
     <div
