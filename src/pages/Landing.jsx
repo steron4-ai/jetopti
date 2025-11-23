@@ -156,7 +156,7 @@ export default function Landing() {
             <div className="step-card">
               <div className="step-number">1</div>
               <div className="step-icon">
-  <img src="/images/steps/step-1.png" alt="List Your Fleet" />
+  <img src="/images/steps/step-1.jpg" alt="List Your Fleet" />
 </div>
               <h3>List Your Fleet</h3>
               <p>Add your jets in minutes. Set prices, availability, and specifications. Our AI optimizes your listings automatically.</p>
@@ -172,7 +172,7 @@ export default function Landing() {
             <div className="step-card">
               <div className="step-number">2</div>
               <div className="step-icon">
-  <img src="/images/steps/step-2.png" alt="AI Matches Customers" />
+  <img src="/images/steps/step-2.jpg" alt="AI Matches Customers" />
 </div>
               <h3>AI Matches Customers</h3>
               <p>Our AI analyzes customer requests and automatically matches them with your perfect jet. No manual work required.</p>
@@ -188,7 +188,7 @@ export default function Landing() {
             <div className="step-card">
               <div className="step-number">3</div>
               <div className="step-icon">
-  <img src="/images/steps/step-3.png" alt="Get Bookings" />
+  <img src="/images/steps/step-3.jpg" alt="Get Bookings" />
 </div>
               <h3>Get Bookings</h3>
               <p>Customers book instantly. You receive payment automatically. Focus on flying, we handle everything else.</p>
