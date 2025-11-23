@@ -1849,6 +1849,7 @@ export default function Home() {
 
             <form onSubmit={handleDirectBooking}>
               {/* STARTFLUGHAFEN – Fixiert auf Jet-Standort */}
+{/* STARTFLUGHAFEN – fixiert auf Jet-Standort, nicht änderbar */}
 <label htmlFor="booking-from">Startflughafen</label>
 <input
   id="booking-from"
@@ -1859,33 +1860,63 @@ export default function Home() {
     backgroundColor: "#f3f4f6",
     cursor: "not-allowed",
     borderColor: "#d1d5db",
-    marginBottom: "15px",
+    marginBottom: "16px",
   }}
 />
 
-{/* ZIELFLUGHAFEN – Kunde kann frei wählen */}
+{/* ZIELFLUGHAFEN – gleiche schöne Vorschlagsliste wie im AI Jet Match */}
 <label htmlFor="booking-to">Zielflughafen</label>
-<input
-  id="booking-to"
-  type="text"
-  name="to"
-  placeholder="z.B. Dubai (DXB) oder New York (JFK)"
-  value={formatAirportLabel(formData.to)}
-  onChange={handleChange}
-  autoComplete="off"
-  list="to-airports"
-  required
-  style={{ marginBottom: "0px" }}
-/>
+<div style={{ position: "relative" }}>
+  <input
+    id="booking-to"
+    type="text"
+    name="to"
+    placeholder="z.B. Dubai (DXB) oder New York (JFK)"
+    value={formatAirportLabel(formData.to)}
+    onChange={handleChange}
+    autoComplete="off"
+    required
+  />
 
-{/* Autocomplete-Liste für Zielflughafen */}
-<datalist id="to-airports">
-  {getSuggestions(formData.to).map((a) => (
-    <option key={a.iata} value={a.iata}>
-      {a.city} ({a.iata})
-    </option>
-  ))}
-</datalist>
+  {toSuggestions.length > 0 && (
+    <div
+      style={{
+        position: "absolute",
+        top: "100%",
+        left: 0,
+        right: 0,
+        zIndex: 9999,
+        background: "white",
+        borderRadius: "8px",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+        marginTop: "4px",
+        maxHeight: "260px",
+        overflowY: "auto",
+      }}
+    >
+      {toSuggestions.map((a) => (
+        <button
+          type="button"
+          key={a.iata}
+          onClick={() => handleSelectAirport("to", a)}
+          style={{
+            width: "100%",
+            textAlign: "left",
+            padding: "8px 12px",
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+          }}
+        >
+          <div style={{ fontWeight: 600 }}>
+            {a.city || a.iata} ({a.iata})
+          </div>
+        </button>
+      ))}
+    </div>
+  )}
+</div>
+
 
 
 
