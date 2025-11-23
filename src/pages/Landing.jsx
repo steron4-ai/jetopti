@@ -2,7 +2,7 @@
 
 import { Link } from 'react-router-dom';
 import '../styles/Landing.css';
-
+import ContactForm from '../components/ContactForm';
 export default function Landing() {
   return (
     <div className="landing-page">
@@ -231,6 +231,8 @@ export default function Landing() {
             <a href="/agb">Terms</a>
           </div>
         </div>
+
+        <ContactForm />
       </footer>
 
     </div>
