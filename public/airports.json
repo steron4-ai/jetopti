@@ -1,0 +1,586 @@
+[
+  {
+    "iata": "MUC",
+    "icao": "EDDM",
+    "city": "Munich",
+    "country": "Germany",
+    "lat": 48.3538,
+    "lon": 11.7861
+  },
+  {
+    "iata": "FRA",
+    "icao": "EDDF",
+    "city": "Frankfurt",
+    "country": "Germany",
+    "lat": 50.0379,
+    "lon": 8.5622
+  },
+  {
+    "iata": "BER",
+    "icao": "EDDB",
+    "city": "Berlin",
+    "country": "Germany",
+    "lat": 52.3667,
+    "lon": 13.5033
+  },
+  {
+    "iata": "DUS",
+    "icao": "EDDL",
+    "city": "Dusseldorf",
+    "country": "Germany",
+    "lat": 51.2895,
+    "lon": 6.7668
+  },
+  {
+    "iata": "HAM",
+    "icao": "EDDH",
+    "city": "Hamburg",
+    "country": "Germany",
+    "lat": 53.6304,
+    "lon": 9.9882
+  },
+  {
+    "iata": "CGN",
+    "icao": "EDDK",
+    "city": "Cologne",
+    "country": "Germany",
+    "lat": 50.8659,
+    "lon": 7.1427
+  },
+  {
+    "iata": "STR",
+    "icao": "EDDS",
+    "city": "Stuttgart",
+    "country": "Germany",
+    "lat": 48.6899,
+    "lon": 9.2220
+  },
+  {
+    "iata": "ZRH",
+    "icao": "LSZH",
+    "city": "Zurich",
+    "country": "Switzerland",
+    "lat": 47.4581,
+    "lon": 8.5481
+  },
+  {
+    "iata": "GVA",
+    "icao": "LSGG",
+    "city": "Geneva",
+    "country": "Switzerland",
+    "lat": 46.2381,
+    "lon": 6.1090
+  },
+  {
+    "iata": "BSL",
+    "icao": "LFSB",
+    "city": "Basel",
+    "country": "Switzerland",
+    "lat": 47.5896,
+    "lon": 7.5292
+  },
+  {
+    "iata": "LHR",
+    "icao": "EGLL",
+    "city": "London Heathrow",
+    "country": "United Kingdom",
+    "lat": 51.4700,
+    "lon": -0.4543
+  },
+  {
+    "iata": "LGW",
+    "icao": "EGKK",
+    "city": "London Gatwick",
+    "country": "United Kingdom",
+    "lat": 51.1537,
+    "lon": -0.1821
+  },
+  {
+    "iata": "STN",
+    "icao": "EGSS",
+    "city": "London Stansted",
+    "country": "United Kingdom",
+    "lat": 51.8850,
+    "lon": 0.2350
+  },
+  {
+    "iata": "LTN",
+    "icao": "EGGW",
+    "city": "London Luton",
+    "country": "United Kingdom",
+    "lat": 51.8747,
+    "lon": -0.3683
+  },
+  {
+    "iata": "MAN",
+    "icao": "EGCC",
+    "city": "Manchester",
+    "country": "United Kingdom",
+    "lat": 53.3537,
+    "lon": -2.2750
+  },
+  {
+    "iata": "BHX",
+    "icao": "EGBB",
+    "city": "Birmingham",
+    "country": "United Kingdom",
+    "lat": 52.4539,
+    "lon": -1.7480
+  },
+  {
+    "iata": "EDI",
+    "icao": "EGPH",
+    "city": "Edinburgh",
+    "country": "United Kingdom",
+    "lat": 55.9500,
+    "lon": -3.3725
+  },
+  {
+    "iata": "CDG",
+    "icao": "LFPG",
+    "city": "Paris Charles de Gaulle",
+    "country": "France",
+    "lat": 46.7233,
+    "lon": 2.3794
+  },
+  {
+    "iata": "LBG",
+    "icao": "LFPB",
+    "city": "Paris Le Bourget",
+    "country": "France",
+    "lat": 48.9695,
+    "lon": 2.4414
+  },
+  {
+    "iata": "ORY",
+    "icao": "LFPO",
+    "city": "Paris Orly",
+    "country": "France",
+    "lat": 48.7252,
+    "lon": 2.3594
+  },
+  {
+    "iata": "NCE",
+    "icao": "LFMN",
+    "city": "Nice",
+    "country": "France",
+    "lat": 43.6653,
+    "lon": 7.2150
+  },
+  {
+    "iata": "LYS",
+    "icao": "LFLL",
+    "city": "Lyon",
+    "country": "France",
+    "lat": 45.7256,
+    "lon": 5.0811
+  },
+  {
+    "iata": "MRS",
+    "icao": "LFML",
+    "city": "Marseille",
+    "country": "France",
+    "lat": 43.4393,
+    "lon": 5.2214
+  },
+  {
+    "iata": "TLS",
+    "icao": "LFBO",
+    "city": "Toulouse",
+    "country": "France",
+    "lat": 43.6291,
+    "lon": 1.3638
+  },
+  {
+    "iata": "BOD",
+    "icao": "LFBD",
+    "city": "Bordeaux",
+    "country": "France",
+    "lat": 44.8283,
+    "lon": -0.7155
+  },
+  {
+    "iata": "MXP",
+    "icao": "LIMC",
+    "city": "Milan Malpensa",
+    "country": "Italy",
+    "lat": 45.6306,
+    "lon": 8.7281
+  },
+  {
+    "iata": "LIN",
+    "icao": "LIML",
+    "city": "Milan Linate",
+    "country": "Italy",
+    "lat": 45.4451,
+    "lon": 9.2767
+  },
+  {
+    "iata": "FCO",
+    "icao": "LIRF",
+    "city": "Rome Fiumicino",
+    "country": "Italy",
+    "lat": 41.8003,
+    "lon": 12.2389
+  },
+  {
+    "iata": "CIA",
+    "icao": "LIRA",
+    "city": "Rome Ciampino",
+    "country": "Italy",
+    "lat": 41.7994,
+    "lon": 12.5949
+  },
+  {
+    "iata": "VCE",
+    "icao": "LIPZ",
+    "city": "Venice",
+    "country": "Italy",
+    "lat": 45.5053,
+    "lon": 12.3519
+  },
+  {
+    "iata": "NAP",
+    "icao": "LIRN",
+    "city": "Naples",
+    "country": "Italy",
+    "lat": 40.8860,
+    "lon": 14.2908
+  },
+  {
+    "iata": "BGY",
+    "icao": "LIME",
+    "city": "Bergamo",
+    "country": "Italy",
+    "lat": 45.6739,
+    "lon": 9.7042
+  },
+  {
+    "iata": "PSA",
+    "icao": "LIRP",
+    "city": "Pisa",
+    "country": "Italy",
+    "lat": 43.6839,
+    "lon": 10.3927
+  },
+  {
+    "iata": "MAD",
+    "icao": "LEMD",
+    "city": "Madrid",
+    "country": "Spain",
+    "lat": 40.4936,
+    "lon": -3.5668
+  },
+  {
+    "iata": "BCN",
+    "icao": "LEBL",
+    "city": "Barcelona",
+    "country": "Spain",
+    "lat": 41.2971,
+    "lon": 2.0785
+  },
+  {
+    "iata": "AGP",
+    "icao": "LEMG",
+    "city": "Malaga",
+    "country": "Spain",
+    "lat": 36.6749,
+    "lon": -4.4991
+  },
+  {
+    "iata": "PMI",
+    "icao": "LEPA",
+    "city": "Palma de Mallorca",
+    "country": "Spain",
+    "lat": 39.5517,
+    "lon": 2.7388
+  },
+  {
+    "iata": "IBZ",
+    "icao": "LEIB",
+    "city": "Ibiza",
+    "country": "Spain",
+    "lat": 38.8729,
+    "lon": 1.3731
+  },
+  {
+    "iata": "VLC",
+    "icao": "LEVC",
+    "city": "Valencia",
+    "country": "Spain",
+    "lat": 39.4893,
+    "lon": -0.4816
+  },
+  {
+    "iata": "ALC",
+    "icao": "LEAL",
+    "city": "Alicante",
+    "country": "Spain",
+    "lat": 38.2822,
+    "lon": -0.5581
+  },
+  {
+    "iata": "LIS",
+    "icao": "LPPT",
+    "city": "Lisbon",
+    "country": "Portugal",
+    "lat": 38.7813,
+    "lon": -9.1359
+  },
+  {
+    "iata": "OPO",
+    "icao": "LPPR",
+    "city": "Porto",
+    "country": "Portugal",
+    "lat": 41.2481,
+    "lon": -8.6814
+  },
+  {
+    "iata": "FAO",
+    "icao": "LPFR",
+    "city": "Faro",
+    "country": "Portugal",
+    "lat": 37.0144,
+    "lon": -7.9659
+  },
+  {
+    "iata": "AMS",
+    "icao": "EHAM",
+    "city": "Amsterdam",
+    "country": "Netherlands",
+    "lat": 52.3086,
+    "lon": 4.7639
+  },
+  {
+    "iata": "RTM",
+    "icao": "EHRD",
+    "city": "Rotterdam",
+    "country": "Netherlands",
+    "lat": 51.9569,
+    "lon": 4.4372
+  },
+  {
+    "iata": "BRU",
+    "icao": "EBBR",
+    "city": "Brussels",
+    "country": "Belgium",
+    "lat": 50.9010,
+    "lon": 4.4844
+  },
+  {
+    "iata": "ANR",
+    "icao": "EBAW",
+    "city": "Antwerp",
+    "country": "Belgium",
+    "lat": 51.1894,
+    "lon": 4.4603
+  },
+  {
+    "iata": "VIE",
+    "icao": "LOWW",
+    "city": "Vienna",
+    "country": "Austria",
+    "lat": 48.1103,
+    "lon": 16.5697
+  },
+  {
+    "iata": "SZG",
+    "icao": "LOWS",
+    "city": "Salzburg",
+    "country": "Austria",
+    "lat": 47.7933,
+    "lon": 13.0043
+  },
+  {
+    "iata": "INN",
+    "icao": "LOWI",
+    "city": "Innsbruck",
+    "country": "Austria",
+    "lat": 47.2602,
+    "lon": 11.3440
+  },
+  {
+    "iata": "LUX",
+    "icao": "ELLX",
+    "city": "Luxembourg",
+    "country": "Luxembourg",
+    "lat": 49.6233,
+    "lon": 6.2044
+  },
+  {
+    "iata": "CPH",
+    "icao": "EKCH",
+    "city": "Copenhagen",
+    "country": "Denmark",
+    "lat": 55.6181,
+    "lon": 12.6561
+  },
+  {
+    "iata": "OSL",
+    "icao": "ENGM",
+    "city": "Oslo",
+    "country": "Norway",
+    "lat": 60.1976,
+    "lon": 11.1004
+  },
+  {
+    "iata": "ARN",
+    "icao": "ESSA",
+    "city": "Stockholm",
+    "country": "Sweden",
+    "lat": 59.6519,
+    "lon": 17.9186
+  },
+  {
+    "iata": "GOT",
+    "icao": "ESGG",
+    "city": "Gothenburg",
+    "country": "Sweden",
+    "lat": 57.6628,
+    "lon": 12.2798
+  },
+  {
+    "iata": "HEL",
+    "icao": "EFHK",
+    "city": "Helsinki",
+    "country": "Finland",
+    "lat": 60.3172,
+    "lon": 24.9633
+  },
+  {
+    "iata": "PRG",
+    "icao": "LKPR",
+    "city": "Prague",
+    "country": "Czech Republic",
+    "lat": 50.1008,
+    "lon": 14.2600
+  },
+  {
+    "iata": "WAW",
+    "icao": "EPWA",
+    "city": "Warsaw",
+    "country": "Poland",
+    "lat": 52.1657,
+    "lon": 20.9671
+  },
+  {
+    "iata": "KRK",
+    "icao": "EPKK",
+    "city": "Krakow",
+    "country": "Poland",
+    "lat": 50.0777,
+    "lon": 19.7848
+  },
+  {
+    "iata": "BUD",
+    "icao": "LHBP",
+    "city": "Budapest",
+    "country": "Hungary",
+    "lat": 47.4298,
+    "lon": 19.2611
+  },
+  {
+    "iata": "ATH",
+    "icao": "LGAV",
+    "city": "Athens",
+    "country": "Greece",
+    "lat": 37.9364,
+    "lon": 23.9445
+  },
+  {
+    "iata": "SKG",
+    "icao": "LGTS",
+    "city": "Thessaloniki",
+    "country": "Greece",
+    "lat": 40.5197,
+    "lon": 22.9709
+  },
+  {
+    "iata": "IST",
+    "icao": "LTFM",
+    "city": "Istanbul",
+    "country": "Turkey",
+    "lat": 41.2619,
+    "lon": 28.7419
+  },
+  {
+    "iata": "DUB",
+    "icao": "EIDW",
+    "city": "Dublin",
+    "country": "Ireland",
+    "lat": 53.4213,
+    "lon": -6.2701
+  },
+  {
+    "iata": "BRE",
+    "icao": "EDDW",
+    "city": "Bremen",
+    "country": "Germany",
+    "lat": 53.0475,
+    "lon": 8.7867
+  },
+  {
+    "iata": "HAJ",
+    "icao": "EDDV",
+    "city": "Hannover",
+    "country": "Germany",
+    "lat": 52.4611,
+    "lon": 9.6850
+  },
+  {
+    "iata": "NUE",
+    "icao": "EDDN",
+    "city": "Nuremberg",
+    "country": "Germany",
+    "lat": 49.4987,
+    "lon": 11.0669
+  },
+  {
+    "iata": "LEJ",
+    "icao": "EDDP",
+    "city": "Leipzig",
+    "country": "Germany",
+    "lat": 51.4324,
+    "lon": 12.2416
+  },
+  {
+    "iata": "MCO",
+    "icao": "LMML",
+    "city": "Malta",
+    "country": "Malta",
+    "lat": 35.8575,
+    "lon": 14.4775
+  },
+  {
+    "iata": "LCA",
+    "icao": "LCLK",
+    "city": "Larnaca",
+    "country": "Cyprus",
+    "lat": 34.8751,
+    "lon": 33.6249
+  },
+  {
+    "iata": "RIX",
+    "icao": "EVRA",
+    "city": "Riga",
+    "country": "Latvia",
+    "lat": 56.9236,
+    "lon": 23.9711
+  },
+  {
+    "iata": "TLL",
+    "icao": "EETN",
+    "city": "Tallinn",
+    "country": "Estonia",
+    "lat": 59.4133,
+    "lon": 24.8328
+  },
+  {
+    "iata": "VNO",
+    "icao": "EYVI",
+    "city": "Vilnius",
+    "country": "Lithuania",
+    "lat": 54.6341,
+    "lon": 25.2858
+  }
+]

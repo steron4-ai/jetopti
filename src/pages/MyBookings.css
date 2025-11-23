@@ -1,0 +1,113 @@
+/* src/pages/MyBookings.css */
+
+/* Grundlayout der Seite */
+.my-bookings-page {
+  min-height: 100vh;
+  background-color: #1e1e2d; /* Dunkler Hintergrund, passend zum Rest */
+  color: #f0f0f0;
+  padding: 40px 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.my-bookings-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #2a2a3d; /* Etwas hellere Container-Box */
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.my-bookings-page h1 {
+  color: #ffffff;
+  border-bottom: 2px solid #4f4f6e;
+  padding-bottom: 15px;
+  margin-bottom: 10px;
+}
+
+.my-bookings-page p {
+  font-size: 1.1rem;
+  color: #b0b0c0;
+  margin-bottom: 30px;
+}
+
+/* Link zurück zur Karte */
+.back-to-map-link {
+  display: inline-block;
+  margin-bottom: 25px;
+  color: #00bfff; /* Helles Blau */
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.back-to-map-link:hover {
+  color: #ffffff;
+}
+
+/* Lade- / Fehler- / Leer-Zustände */
+.my-bookings-loading,
+.my-bookings-error,
+.my-bookings-empty {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #b0b0c0;
+  padding: 50px;
+}
+
+.my-bookings-error {
+  color: #ff6b6b;
+}
+
+/* Buchungs-Tabelle */
+.bookings-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.bookings-table th,
+.bookings-table td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #3a3a5a;
+}
+
+.bookings-table th {
+  background-color: #31314a;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bookings-table td {
+  color: #e0e0e0;
+  font-size: 1rem;
+}
+
+.bookings-table tr:last-child td {
+  border-bottom: none;
+}
+
+.bookings-table tr:hover {
+  background-color: #31314a;
+}
+
+/* Status-Badges (ähnlich wie im Dashboard) */
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+  color: #fff;
+}
+
+.status-pending { background-color: #ffc107; color: #333; }
+.status-confirmed { background-color: #28a745; }
+.status-completed { background-color: #007bff; }
+.status-rejected { background-color: #dc3545; }
+.status-cancelled { background-color: #6c757d; }

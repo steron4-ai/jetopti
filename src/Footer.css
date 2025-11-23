@@ -1,0 +1,72 @@
+.app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.footer-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-link {
+  color: #7b2cbf;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.footer-link:hover {
+  background: rgba(123, 44, 191, 0.1);
+  color: #6920ac;
+}
+
+.footer-separator {
+  color: #ccc;
+  font-size: 12px;
+}
+
+.footer-copyright {
+  color: #666;
+  font-size: 13px;
+}
+
+/* Mobile Optimierung */
+@media (max-width: 600px) {
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+    padding: 10px 15px;
+  }
+
+  .footer-links {
+    order: 2;
+  }
+
+  .footer-copyright {
+    order: 1;
+    margin-bottom: 5px;
+  }
+}
