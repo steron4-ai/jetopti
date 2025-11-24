@@ -689,23 +689,25 @@ export default function Home() {
       el.style.height = "55px";
       el.style.cursor = "pointer";
 
-                 const statusColor =
+            const statusColor =
         jet.status === "in_flight" ? "#6366f1" : "#10b981";
 
-      // ✨ NEU: Route-Zeile, falls Jet eine aktive Route hat
+      // ✨ NEU: Route-Zeile nur anzeigen, wenn Jet wirklich eine aktive Route hat
       const routeLine =
+        jet.status === "in_flight" &&
         jet.flight_from_iata &&
         jet.flight_to_iata
-          ? `<div style="margin-top: 4px; font-size: 0.9rem; color: #111;">
+          ? `<div style="margin-top: 4px; font-size: 0.85rem; color: #111;">
                🛫 ${jet.flight_from_iata} → ${jet.flight_to_iata}
              </div>`
           : "";
 
       const popupHtml = `
         <div style="font-family: system-ui, sans-serif; text-align: center;">
-          <img src="${jet.image_url || "/jets/default.jpg"}"
-               alt="${jet.name}"
-               style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px 6px 0 0; margin-bottom: 8px;">
+          <img
+            src="${jet.image_url || "/jets/default.jpg"}"
+            alt="${jet.name}"
+            style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px 6px 0 0; margin-bottom: 8px;">
           <div style="padding: 0 10px 10px 10px;">
             <strong style="font-size: 1.1rem; color: #111;">${jet.name}</strong><br/>
             <span style="color: ${getJetColor(jet.type)}; font-weight: 600;">
@@ -724,7 +726,6 @@ export default function Home() {
           </div>
         </div>
       `;
-
 
 
       const popup = new mapboxgl.Popup({
@@ -956,39 +957,40 @@ export default function Home() {
         fromIATA: startAirport.iata,
         toIATA: destAirport.iata,
       });
-    } catch (err) {
-      console.error("Fehler beim Aufruf der AI-Function:", err);
+} catch (err) {
+  console.error("Fehler beim Aufruf der AI-Function:", err);
 
-      let displayErrorMessage = "Ein unbekannter Serverfehler ist aufgetreten.";
+  let displayErrorMessage = "Ein unbekannter Serverfehler ist aufgetreten.";
 
-      if (err.context && err.context.error) {
-        const backendError = err.context.error;
-        if (backendError.details) {
-          displayErrorMessage = backendError.details;
-        } else if (backendError.error) {
-          displayErrorMessage = backendError.error;
-        } else {
-          displayErrorMessage = err.message;
-        }
-      } else if (err.message) {
-        displayErrorMessage = err.message;
-      }
+  // 👇 Supabase FunctionsHttpError sauber auslesen
+  const anyErr = err;
 
-      if (
-        displayErrorMessage.includes(
-          "Edge Function returned a non-2xx status code"
-        ) ||
-        displayErrorMessage.includes("Kein passender Jet gefunden")
-      ) {
-        displayErrorMessage =
-          "Vorlaufzeit zu kurz. Bitte wählen Sie einen späteren Abflugzeitpunkt.";
-      }
-
-      showToast(`❌ Fehler: ${displayErrorMessage}`, "error");
-      setSmartResult({ error: true, message: displayErrorMessage });
-    } finally {
-      setLoading(false);
+  if (anyErr.context && anyErr.context.error) {
+    const backendError = anyErr.context.error;
+    if (backendError.details) {
+      displayErrorMessage = backendError.details;
+    } else if (backendError.error) {
+      displayErrorMessage = backendError.error;
+    } else if (anyErr.message) {
+      displayErrorMessage = anyErr.message;
     }
+  } else if (anyErr.message) {
+    displayErrorMessage = anyErr.message;
+  }
+
+  // ❗ Nur "Kein passender Jet gefunden" mappen wir um,
+  // alles andere (z.B. Airport nicht gefunden) zeigen wir 1:1 an.
+  if (displayErrorMessage.includes("Kein passender Jet gefunden")) {
+    displayErrorMessage =
+      "Kein passender Jet gefunden. Prüfe Vorlaufzeit, Jet-Reichweite oder Sitzanzahl.";
+  }
+
+  showToast(`❌ Fehler: ${displayErrorMessage}`, "error");
+  setSmartResult({ error: true, message: displayErrorMessage });
+} finally {
+  setLoading(false);
+}
+
   };
 
   const handleSmartBookingSubmit = async () => {
