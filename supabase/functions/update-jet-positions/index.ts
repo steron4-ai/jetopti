@@ -1,10 +1,11 @@
 // supabase/functions/update-jet-positions/index.ts
-// ✅ V14: Live-Position, Flugstatus, Auto-Airport & Auto-"Booking completed" bei Landung
+// ✅ V15: Live-Position, Flugstatus, Auto-Airport, Auto-"Booking completed" bei Landung
+//    + Route-Felder flight_from_iata / flight_to_iata aus JetOpti-Buchungen
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
-console.log('Function "update-jet-positions" V14 gestartet.');
+console.log('Function "update-jet-positions" V15 gestartet.');
 
 // --------------------------------------------------------------------
 // ENV / CONFIG
@@ -23,8 +24,10 @@ const STATUS_BOOKED = 'gebucht';
 const STATUS_MAINTENANCE = 'wartung';
 
 // Booking-Status-Werte – ggf. an deine DB anpassen
+const BOOKING_STATUS_PENDING = 'pending';
 const BOOKING_STATUS_ACCEPTED = 'accepted';
 const BOOKING_STATUS_COMPLETED = 'completed';
+const BOOKING_STATUS_CANCELLED = 'cancelled';
 
 // --------------------------------------------------------------------
 // Helper
@@ -56,6 +59,50 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): num
   return R * c;
 }
 
+// Route aus JetOpti-Buchungen ermitteln (falls vorhanden)
+async function findActiveRouteForJet(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  jetId: string,
+) {
+  try {
+    const now = Date.now();
+
+    // Wir nehmen die nächste akzeptierte Buchung in der Nähe von "jetzt"
+    const { data, error } = await supabaseAdmin
+      .from('bookings')
+      .select('from_iata, to_iata, departure_date, status')
+      .eq('jet_id', jetId)
+      .eq('status', BOOKING_STATUS_ACCEPTED)
+      .order('departure_date', { ascending: true })
+      .limit(1);
+
+    if (error) {
+      console.warn('[ROUTE] Konnte Buchungen für Jet nicht laden:', error);
+      return null;
+    }
+
+    const booking = data?.[0];
+    if (!booking) return null;
+    if (!booking.from_iata || !booking.to_iata) return null;
+
+    const depMs = new Date(booking.departure_date as string).getTime();
+    const diffHours = Math.abs(depMs - now) / 3_600_000;
+
+    // Heuristik: nur Buchungen ±48h um "jetzt" als aktive Route verwenden
+    if (diffHours > 48) {
+      return null;
+    }
+
+    return {
+      from_iata: booking.from_iata as string,
+      to_iata: booking.to_iata as string,
+    };
+  } catch (err) {
+    console.error('[ROUTE] Unerwarteter Fehler:', err);
+    return null;
+  }
+}
+
 // --------------------------------------------------------------------
 // MAIN
 // --------------------------------------------------------------------
@@ -68,10 +115,12 @@ Deno.serve(async (req) => {
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
   try {
-    // 1. Jets laden
+    // 1. Jets laden (inkl. flight_from_iata / flight_to_iata)
     const { data: jets, error: jetError } = await supabaseAdmin
       .from('jets')
-      .select('id, name, icao24, status, current_iata, current_lat, current_lng')
+      .select(
+        'id, name, icao24, status, current_iata, current_lat, current_lng, flight_from_iata, flight_to_iata',
+      )
       .not('icao24', 'is', null)
       .neq('icao24', '');
 
@@ -124,13 +173,13 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const data = await apiResponse.json() as any;
+        const data = (await apiResponse.json()) as any;
 
-        // ADSBexchange V2 liefert ein einzelnes Objekt
+        // ADSBexchange V2 liefert für diesen Endpoint ein einzelnes Objekt
         const lat = toNumber(data.lat, NaN);
         const lng = toNumber(data.lon, NaN);
-        const groundSpeed = toNumber(data.gs, 0);       // Knoten
-        const altitude = toNumber(data.alt_baro, 0);    // Fuß
+        const groundSpeed = toNumber(data.gs, 0); // Knoten
+        const altitude = toNumber(data.alt_baro, 0); // Fuß
 
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
           console.log(`[INFO] Keine Positionsdaten für ${icao}.`);
@@ -149,8 +198,8 @@ Deno.serve(async (req) => {
         const isAirborne = groundSpeed > 50 && altitude > 500;
 
         if (isAirborne) {
-          // Nur auf "in_flight" setzen, wenn er vorher am Boden war
-          if (wasStatus === STATUS_AVAILABLE) {
+          // Jet ist in der Luft → Status "in_flight"
+          if (wasStatus === STATUS_AVAILABLE || wasStatus === STATUS_BOOKED) {
             newStatus = STATUS_IN_FLIGHT;
           }
         } else {
@@ -191,6 +240,35 @@ Deno.serve(async (req) => {
         }
 
         // ----------------------------------------------------
+        // Route-Felder (flight_from_iata / flight_to_iata)
+        // ----------------------------------------------------
+        let routeFromIata: string | null = jet.flight_from_iata || null;
+        let routeToIata: string | null = jet.flight_to_iata || null;
+
+        // Wenn Jet in der Luft ist oder gebucht wurde und noch keine Route gesetzt ist:
+        if ((newStatus === STATUS_IN_FLIGHT || wasStatus === STATUS_BOOKED) &&
+            (!routeFromIata || !routeToIata)) {
+          const route = await findActiveRouteForJet(supabaseAdmin, jet.id);
+          if (route) {
+            routeFromIata = route.from_iata;
+            routeToIata = route.to_iata;
+            console.log(
+              `[ROUTE] Setze Route für Jet ${jet.name ?? jet.id}: ${routeFromIata} → ${routeToIata}`,
+            );
+          } else {
+            console.log(
+              `[ROUTE] Keine passende JetOpti-Buchung für Jet ${jet.name ?? jet.id} gefunden.`,
+            );
+          }
+        }
+
+        // Wenn Jet gerade gelandet ist → Route für Kartenanzeige zurücksetzen
+        if (hasLandedNow) {
+          routeFromIata = null;
+          routeToIata = null;
+        }
+
+        // ----------------------------------------------------
         // DB-Update für Jet
         // ----------------------------------------------------
         const updatePayload: Record<string, any> = {
@@ -204,6 +282,12 @@ Deno.serve(async (req) => {
         }
         if (newStatus !== wasStatus) {
           updatePayload.status = newStatus;
+        }
+        if (routeFromIata !== jet.flight_from_iata) {
+          updatePayload.flight_from_iata = routeFromIata;
+        }
+        if (routeToIata !== jet.flight_to_iata) {
+          updatePayload.flight_to_iata = routeToIata;
         }
 
         const { error: updateError } = await supabaseAdmin
@@ -221,11 +305,11 @@ Deno.serve(async (req) => {
 
         updatedJetsCount++;
         console.log(
-          `[UPDATE] Jet ${jet.name ?? jet.id} (${icao}) -> Pos: ${lat}, ${lng}, Status: ${wasStatus} -> ${newStatus}, IATA: ${jet.current_iata} -> ${newIata}`,
+          `[UPDATE] Jet ${jet.name ?? jet.id} (${icao}) -> Pos: ${lat}, ${lng}, Status: ${wasStatus} -> ${newStatus}, IATA: ${jet.current_iata} -> ${newIata}, Route: ${routeFromIata ?? '-'} → ${routeToIata ?? '-'}`,
         );
 
         // ----------------------------------------------------
-        // NEU: Buchungen automatisch abschließen, wenn Jet gelandet ist
+        // Buchungen automatisch abschließen, wenn Jet gelandet ist
         // ----------------------------------------------------
         if (hasLandedNow) {
           const { error: bookingError } = await supabaseAdmin

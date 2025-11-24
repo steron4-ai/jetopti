@@ -3,6 +3,7 @@
 import { Link } from 'react-router-dom';
 import '../styles/Landing.css';
 import ContactForm from '../components/ContactForm';
+
 export default function Landing() {
   return (
     <div className="landing-page">
@@ -55,7 +56,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* FEATURES SECTION - MIT BILDERN! */}
+      {/* FEATURES SECTION */}
       <section className="features-section">
         <div className="features-container">
           
@@ -142,60 +143,65 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* HOW IT WORKS SECTION */}
+      {/* HOW IT WORKS SECTION - NEU MIT FEATURE CARD STYLE! */}
       <section className="how-it-works-section">
-        <div className="how-container">
+        <div className="features-container">
           
-          <div className="how-header">
+          <div className="features-header">
             <h2>How JetOpti Works</h2>
             <p>Three simple steps to transform your charter business</p>
           </div>
 
-          <div className="steps-container">
+          <div className="features-grid">
             
-            <div className="step-card">
-              <div className="step-number">1</div>
-              <div className="step-icon">
-  <img src="/images/steps/step-1.jpg" alt="List Your Fleet" />
-</div>
-              <h3>List Your Fleet</h3>
-              <p>Add your jets in minutes. Set prices, availability, and specifications. Our AI optimizes your listings automatically.</p>
-              <div className="step-features">
-                <span>• 5 min setup</span>
-                <span>• Auto-optimization</span>
-                <span>• Real-time sync</span>
+            {/* Step 1 */}
+            <div className="feature-card">
+              <div className="feature-image">
+                <img src="/images/steps/step-1.jpg" alt="List Your Fleet" />
+              </div>
+              <div className="feature-content">
+                <div className="step-number-badge">1</div>
+                <h3>List Your Fleet</h3>
+                <p>Add your jets in minutes. Set prices, availability, and specifications. Our AI optimizes your listings automatically.</p>
+                <div className="step-features-list">
+                  <span>• 5 min setup</span>
+                  <span>• Auto-optimization</span>
+                  <span>• Real-time sync</span>
+                </div>
               </div>
             </div>
 
-            <div className="step-arrow">→</div>
-
-            <div className="step-card">
-              <div className="step-number">2</div>
-              <div className="step-icon">
-  <img src="/images/steps/step-2.jpg" alt="AI Matches Customers" />
-</div>
-              <h3>AI Matches Customers</h3>
-              <p>Our AI analyzes customer requests and automatically matches them with your perfect jet. No manual work required.</p>
-              <div className="step-features">
-                <span>• Smart matching</span>
-                <span>• Instant notifications</span>
-                <span>• Automated process</span>
+            {/* Step 2 */}
+            <div className="feature-card">
+              <div className="feature-image">
+                <img src="/images/steps/step-2.jpg" alt="AI Matches Customers" />
+              </div>
+              <div className="feature-content">
+                <div className="step-number-badge">2</div>
+                <h3>AI Matches Customers</h3>
+                <p>Our AI analyzes customer requests and automatically matches them with your perfect jet. No manual work required.</p>
+                <div className="step-features-list">
+                  <span>• Smart matching</span>
+                  <span>• Instant notifications</span>
+                  <span>• Automated process</span>
+                </div>
               </div>
             </div>
 
-            <div className="step-arrow">→</div>
-
-            <div className="step-card">
-              <div className="step-number">3</div>
-              <div className="step-icon">
-  <img src="/images/steps/step-3.jpg" alt="Get Bookings" />
-</div>
-              <h3>Get Bookings</h3>
-              <p>Customers book instantly. You receive payment automatically. Focus on flying, we handle everything else.</p>
-              <div className="step-features">
-                <span>• Instant booking</span>
-                <span>• Auto payments</span>
-                <span>• More revenue</span>
+            {/* Step 3 */}
+            <div className="feature-card">
+              <div className="feature-image">
+                <img src="/images/steps/step-3.jpg" alt="Get Bookings" />
+              </div>
+              <div className="feature-content">
+                <div className="step-number-badge">3</div>
+                <h3>Get Bookings</h3>
+                <p>Customers book instantly. You receive payment automatically. Focus on flying, we handle everything else.</p>
+                <div className="step-features-list">
+                  <span>• Instant booking</span>
+                  <span>• Auto payments</span>
+                  <span>• More revenue</span>
+                </div>
               </div>
             </div>
 
@@ -227,6 +233,9 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* CONTACT FORM */}
+      <ContactForm />
+
       {/* FOOTER */}
       <footer className="footer">
         <div className="footer-content">
@@ -237,8 +246,6 @@ export default function Landing() {
             <a href="/agb">Terms</a>
           </div>
         </div>
-
-        <ContactForm />
       </footer>
 
     </div>
