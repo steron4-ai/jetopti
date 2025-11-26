@@ -5,6 +5,26 @@ import App from './App'; // Importiert deine NEUE App.jsx (den Router)
 import './index.css';
 import { AuthProvider } from './lib/AuthContext';
 
+// 🔥 KILL SWITCH: Löscht alte Service Worker, die Probleme machen
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      console.log('Service Worker gefunden und entfernt:', registration);
+      registration.unregister();
+    }
+  });
+  // Erzwingt einen Reload, falls der Controller noch aktiv war (optional, aber sicher)
+  if (window.navigator && navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider> {/* AuthProvider MUSS hier außen sein */}
