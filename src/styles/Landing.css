@@ -36,21 +36,10 @@ body {
 }
 
 /* ============================================
-   NAVBAR
+   NAVBAR - HIDDEN
 ============================================ */
 .navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: none !important; /* Navigation komplett verstecken */
 }
 
 .nav-container {
@@ -169,7 +158,7 @@ body {
 }
 
 .hero-logo-color {
-  width: 350px;
+  width: 500px; /* GRÖßER - war 350px */
   max-width: 90%;
   margin-bottom: 40px;
   animation: fadeInDown 1s ease;
@@ -179,7 +168,7 @@ body {
 }
 
 .hero h1 {
-  font-size: 64px;
+  font-size: 48px; /* KLEINER - war 64px */
   font-weight: 900;
   margin-bottom: 24px;
   line-height: 1.1;
