@@ -4,23 +4,37 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    // Cache Busting mit Hashes (WICHTIGSTER Teil!)
+    // Cache Busting mit Hashes
     rollupOptions: {
       output: {
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
         
-        // Code Splitting für kleinere Dateien
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'supabase-vendor': ['@supabase/supabase-js'],
+        // Rolldown-kompatible manualChunks (als Funktion!)
+        manualChunks(id) {
+          // React & React-DOM in separate Datei
+          if (id.includes('node_modules/react') || 
+              id.includes('node_modules/react-dom') || 
+              id.includes('node_modules/react-router-dom')) {
+            return 'react-vendor';
+          }
+          
+          // Supabase in separate Datei
+          if (id.includes('node_modules/@supabase')) {
+            return 'supabase-vendor';
+          }
+          
+          // Mapbox in separate Datei (falls verwendet)
+          if (id.includes('node_modules/mapbox')) {
+            return 'mapbox-vendor';
+          }
         }
       }
     },
     
-    // Standard Minification (ohne terser)
-    minify: 'esbuild', // Standard, kein Extra Package nötig!
+    // Standard Minification
+    minify: 'esbuild',
     
     // Chunk Size Warning
     chunkSizeWarningLimit: 600
