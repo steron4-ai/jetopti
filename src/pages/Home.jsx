@@ -382,14 +382,52 @@ export default function Home() {
   });
 
   // Suggestions-Funktion auf Basis der geladenen Airports
-  const getSuggestions = buildGetSuggestions(airports);
+// Suggestions-Funktion auf Basis der geladenen Airports
+const getSuggestions = buildGetSuggestions(airports);
 
-  // Airport-Auflösung: nimm einfach den besten Vorschlag von getSuggestions
-  const resolveAirport = (input) => {
-    if (!input) return null;
-    const suggestions = getSuggestions(input);
-    return suggestions.length > 0 ? suggestions[0] : null;
-  };
+// Airport-Auflösung: versucht erst exakte Treffer, dann Vorschläge
+const resolveAirport = (input) => {
+  if (!input) return null;
+
+  const trimmed = input.toString().trim();
+  const upper = trimmed.toUpperCase();
+
+  // 1) Exakter IATA-Treffer (z.B. "PMI", "BER", "LEJ")
+  let match =
+    airports.find((a) => (a.iata || "").toUpperCase() === upper) || null;
+  if (match) return match;
+
+  // 2) Exakter City-Treffer (z.B. "BERLIN", "PALMA DE MALLORCA")
+  match =
+    airports.find((a) => (a.city || "").toUpperCase() === upper) || null;
+  if (match) return match;
+
+  // 3) Falls der User "Palma de Mallorca (PMI)" o.ä. drin hat → IATA aus Klammer lesen
+  const iataMatch = trimmed.match(/\(([A-Z]{3})\)$/);
+  if (iataMatch) {
+    const code = iataMatch[1];
+    match =
+      airports.find((a) => (a.iata || "").toUpperCase() === code) || null;
+    if (match) return match;
+  }
+
+  // 4) Vorschläge über unsere Fuzzy-Suche holen
+  const suggestions = getSuggestions(trimmed) || [];
+  if (suggestions.length === 0) return null;
+
+  // 4a) Wenn es nur EINEN Vorschlag gibt → nimm den
+  if (suggestions.length === 1) return suggestions[0];
+
+  // 4b) Wenn der User z.B. "PMI" geschrieben hat und das in der Liste ist → nimm genau den
+  const exactSuggestion = suggestions.find(
+    (a) => (a.iata || "").toUpperCase() === upper
+  );
+  if (exactSuggestion) return exactSuggestion;
+
+  // 4c) Wenn mehrere verschiedene Treffer und kein exakter Code → lieber "nicht eindeutig" statt falscher Kontinent
+  return null;
+};
+
 
   // Route berechnen (wird v.a. für Preis/Info bei Direktbuchung verwendet)
   const calculateRoute = (from, to) => {
