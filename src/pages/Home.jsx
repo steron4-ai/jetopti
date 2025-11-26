@@ -1307,190 +1307,212 @@ const resolveAirport = (input) => {
     }
   };
 
-    const handleDirectBooking = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+const handleDirectBooking = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
 
-    if (!isAuthenticated) {
-      showToast("Bitte zuerst anmelden, um anzufragen.", "error");
-      setShowLogin(true);
-      setLoading(false);
-      return;
-    }
+  if (!isAuthenticated) {
+    showToast("Bitte zuerst anmelden, um anzufragen.", "error");
+    setShowLogin(true);
+    setLoading(false);
+    return;
+  }
 
-    if (!routeInfo || !booking) {
-      setError("Buchungs- oder Routen-Infos fehlen.");
-      setLoading(false);
-      return;
-    }
+  if (!routeInfo || !booking) {
+    setError("Buchungs- oder Routen-Infos fehlen.");
+    setLoading(false);
+    return;
+  }
 
-    const departureTime = new Date(formData.dateTime);
-    const now = new Date();
-    const hoursUntilFlight = (departureTime - now) / 3600000;
-    const jetLeadTime = booking.lead_time_hours || 4;
+  // -----------------------------
+  // VORLAUFZEIT CHECK
+  // -----------------------------
+  const departureTime = new Date(formData.dateTime);
+  const now = new Date();
+  const hoursUntilFlight = (departureTime - now) / 3600000;
+  const jetLeadTime = booking.lead_time_hours || 4;
 
-    if (hoursUntilFlight < jetLeadTime) {
-      showToast(
-        `Fehler: Die Vorlaufzeit dieses Jets beträgt ${jetLeadTime} Stunden. Bitte wählen Sie eine spätere Uhrzeit.`,
-        "error"
-      );
-      setLoading(false);
-      return;
-    }
-
-    const finalPrice = calculatePrice(
-      routeInfo.distanceKm,
-      booking,
-      formData.roundtrip
+  if (hoursUntilFlight < jetLeadTime) {
+    showToast(
+      `Fehler: Die Vorlaufzeit dieses Jets beträgt ${jetLeadTime} Stunden. Bitte wählen Sie eine spätere Uhrzeit.`,
+      "error"
     );
+    setLoading(false);
+    return;
+  }
 
-    const bookingData = {
-      company_id: booking.company_id,
-      jet_id: booking.id,
-      from_location: formData.from.toUpperCase(),
-      from_iata: routeInfo.start.iata,
-      to_location: formData.to.toUpperCase(),
-      to_iata: routeInfo.dest.iata,
-      departure_date: formData.dateTime,
-      return_date: formData.roundtrip ? formData.returnDate : null,
-      total_price: finalPrice,
-      status: "pending",
-      customer_name: formData.name,
-      customer_email: formData.email,
-      customer_phone: formData.phone,
-      jet_name: booking.name,
-      jet_type: booking.type,
-      passengers: parseInt(formData.passengers, 10),
-    };
+  // -----------------------------
+  // NEU: REICHWEITEN CHECK
+  // -----------------------------
+  const jetRangeKm = Number(booking.range) || 0;
+  const mainDistanceKm = routeInfo.distanceKm;
 
-    try {
-      const { data: bookingEntry, error: dbError } = await supabase
-        .from("bookings")
-        .insert(bookingData)
-        .select()
-        .single();
+  if (jetRangeKm > 0 && mainDistanceKm > jetRangeKm) {
+    showToast(
+      `Dieser Jet kann die Strecke nicht ohne Tankstopp fliegen (Reichweite ca. ${jetRangeKm.toFixed(
+        0
+      )} km, Strecke ca. ${mainDistanceKm.toFixed(
+        0
+      )} km). Bitte wählen Sie einen Jet mit größerer Reichweite.`,
+      "error"
+    );
+    setLoading(false);
+    return;
+  }
 
-      if (dbError) throw dbError;
+  // -----------------------------
+  // PREISBERECHNUNG
+  // -----------------------------
+  const finalPrice = calculatePrice(
+    mainDistanceKm,
+    booking,
+    formData.roundtrip
+  );
 
-            // E-Mail an Kunden
-      try {
-        const kundenParams = {
-          recipient_email: bookingData.customer_email,
-          subject:
-            "Ihre JetOpti-Anfrage (" +
-            bookingEntry.id +
-            ") ist in Bearbeitung",
-          name_an: bookingData.customer_name,
-          nachricht:
-            "Vielen Dank für Ihre Anfrage (ID: " +
-            bookingEntry.id +
-            ") für die Route " +
-            bookingData.from_location +
-            " -> " +
-            bookingData.to_location +
-            ". Wir prüfen die Verfügbarkeit bei der Charterfirma und melden uns in Kürze.",
-          route:
-            bookingData.from_location + " -> " + bookingData.to_location,
-          jet_name: bookingData.jet_name,
-          departure_date: new Date(
-            bookingData.departure_date
-          ).toLocaleString("de-DE"),
-          customer_name: bookingData.customer_name,
-          customer_email: bookingData.customer_email,
-          customer_phone: bookingData.customer_phone || "N/A",
-          total_price: Number(bookingData.total_price).toLocaleString(),
-          booking_id: bookingEntry.id,
-        };
-
-        await emailjs.send(
-          emailServiceId,
-          templateGenerisch,
-          kundenParams,
-          emailPublicKey
-        );
-      } catch (emailError) {
-        console.warn(
-          "⚠️ E-Mail (Anfrage-Kunde) konnte nicht gesendet werden:",
-          emailError
-        );
-      }
-
-      // E-Mail an Charter
-      try {
-        const charterParams = {
-          recipient_email: "steron4@web.de",
-          subject:
-            "NEUE ANFRAGE (" +
-            bookingEntry.id +
-            "): " +
-            bookingData.from_location +
-            " -> " +
-            bookingData.to_location,
-          name_an: "JetOpti Partner",
-          nachricht:
-            "Eine neue Buchungsanfrage ist eingetroffen. Bitte prüfen Sie die Details in Ihrem Dashboard und bestätigen oder lehnen Sie die Anfrage ab.",
-          route:
-            bookingData.from_location + " -> " + bookingData.to_location,
-          jet_name: bookingData.jet_name,
-          departure_date: new Date(
-            bookingData.departure_date
-          ).toLocaleString("de-DE"),
-          customer_name: bookingData.customer_name,
-          customer_email: bookingData.customer_email,
-          customer_phone: bookingData.customer_phone || "N/A",
-          total_price: Number(bookingData.total_price).toLocaleString(),
-          booking_id: bookingEntry.id,
-        };
-
-        await emailjs.send(
-          emailServiceId,
-          templateGenerisch,
-          charterParams,
-          emailPublicKey
-        );
-      } catch (emailError) {
-        console.warn(
-          "⚠️ E-Mail (Anfrage-Charter) konnte nicht gesendet werden:",
-          emailError
-        );
-      }
-
-
-      // --------------------------------------------------
-      // Jet reservieren
-      // --------------------------------------------------
-      const { error: jetUpdateError } = await supabase
-        .from("jets")
-        .update({ status: "wartung" })
-        .eq("id", booking.id);
-
-      if (jetUpdateError) {
-        console.error(
-          "⚠️ Jet-Status konnte nicht aktualisiert werden:",
-          jetUpdateError
-        );
-      }
-
-      showToast("✅ Buchungsanfrage erfolgreich gesendet!", "success");
-      setBooking(null);
-      setFormData((prev) => ({
-        ...prev,
-        from: "",
-        to: "",
-        dateTime: getDefaultDateTime(4),
-        returnDate: "",
-        roundtrip: false,
-        passengers: 1,
-      }));
-      setRouteInfo(null);
-    } catch (err) {
-      console.error("Fehler bei Direktbuchung:", err);
-      showToast(`❌ Fehler: ${err.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
+  const bookingData = {
+    company_id: booking.company_id,
+    jet_id: booking.id,
+    from_location: formData.from.toUpperCase(),
+    from_iata: routeInfo.start.iata,
+    to_location: formData.to.toUpperCase(),
+    to_iata: routeInfo.dest.iata,
+    departure_date: formData.dateTime,
+    return_date: formData.roundtrip ? formData.returnDate : null,
+    total_price: finalPrice,
+    status: "pending",
+    customer_name: formData.name,
+    customer_email: formData.email,
+    customer_phone: formData.phone,
+    jet_name: booking.name,
+    jet_type: booking.type,
+    passengers: parseInt(formData.passengers, 10),
   };
+
+  try {
+    const { data: bookingEntry, error: dbError } = await supabase
+      .from("bookings")
+      .insert(bookingData)
+      .select()
+      .single();
+
+    if (dbError) throw dbError;
+
+    // --------------------------------------------------
+    // E-Mail an Kunden
+    // --------------------------------------------------
+    try {
+      const kundenParams = {
+        recipient_email: bookingData.customer_email,
+        subject:
+          "Ihre JetOpti-Anfrage (" +
+          bookingEntry.id +
+          ") ist in Bearbeitung",
+        name_an: bookingData.customer_name,
+        nachricht:
+          "Vielen Dank für Ihre Anfrage (ID: " +
+          bookingEntry.id +
+          ") für die Route " +
+          bookingData.from_location +
+          " → " +
+          bookingData.to_location +
+          ". Wir prüfen die Verfügbarkeit bei der Charterfirma und melden uns in Kürze.",
+        route:
+          bookingData.from_location + " → " + bookingData.to_location,
+        jet_name: bookingData.jet_name,
+        departure_date: new Date(
+          bookingData.departure_date
+        ).toLocaleString("de-DE"),
+        customer_name: bookingData.customer_name,
+        customer_email: bookingData.customer_email,
+        customer_phone: bookingData.customer_phone || "N/A",
+        total_price: Number(bookingData.total_price).toLocaleString(),
+        booking_id: bookingEntry.id,
+      };
+
+      await emailjs.send(
+        emailServiceId,
+        templateGenerisch,
+        kundenParams,
+        emailPublicKey
+      );
+    } catch (emailError) {
+      console.warn(
+        "⚠️ E-Mail (Anfrage-Kunde) konnte nicht gesendet werden:",
+        emailError
+      );
+    }
+
+    // --------------------------------------------------
+    // E-Mail an Charter
+    // --------------------------------------------------
+    try {
+      const charterParams = {
+        recipient_email: "steron4@web.de",
+        subject:
+          "NEUE ANFRAGE (" +
+          bookingEntry.id +
+          "): " +
+          bookingData.from_location +
+          " → " +
+          bookingData.to_location,
+        name_an: "JetOpti Partner",
+        nachricht:
+          "Eine neue Buchungsanfrage ist eingetroffen. Bitte prüfen Sie die Details in Ihrem Dashboard und bestätigen oder lehnen Sie die Anfrage ab.",
+        route:
+          bookingData.from_location + " → " + bookingData.to_location,
+        jet_name: bookingData.jet_name,
+        departure_date: new Date(
+          bookingData.departure_date
+        ).toLocaleString("de-DE"),
+        customer_name: bookingData.customer_name,
+        customer_email: bookingData.customer_email,
+        customer_phone: bookingData.customer_phone || "N/A",
+        total_price: Number(bookingData.total_price).toLocaleString(),
+        booking_id: bookingEntry.id,
+      };
+
+      await emailjs.send(
+        emailServiceId,
+        templateGenerisch,
+        charterParams,
+        emailPublicKey
+      );
+    } catch (emailError) {
+      console.warn(
+        "⚠️ E-Mail (Anfrage-Charter) konnte nicht gesendet werden:",
+        emailError
+      );
+    }
+
+    // --------------------------------------------------
+    // JET STATUS UPDATE
+    // --------------------------------------------------
+    await supabase
+      .from("jets")
+      .update({ status: "wartung" })
+      .eq("id", booking.id);
+
+    showToast("✅ Buchungsanfrage erfolgreich gesendet!", "success");
+    setBooking(null);
+    setRouteInfo(null);
+    setFormData((prev) => ({
+      ...prev,
+      from: "",
+      to: "",
+      dateTime: getDefaultDateTime(4),
+      returnDate: "",
+      roundtrip: false,
+      passengers: 1,
+    }));
+  } catch (err) {
+    console.error("Fehler bei Direktbuchung:", err);
+    showToast(`❌ Fehler: ${err.message}`, "error");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
 
    const handleChange = (e) => {
