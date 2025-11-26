@@ -1120,39 +1120,53 @@ const resolveAirport = (input) => {
         fromIATA: startAirport.iata,
         toIATA: destAirport.iata,
       });
-} catch (err) {
-  console.error("Fehler beim Aufruf der AI-Function:", err);
+  } catch (err) {
+    console.error("Fehler beim Aufruf der AI-Function:", err);
 
-  let displayErrorMessage = "Ein unbekannter Serverfehler ist aufgetreten.";
+    let displayErrorMessage = "Ein unbekannter Serverfehler ist aufgetreten.";
 
-  // 👇 Supabase FunctionsHttpError sauber auslesen
-  const anyErr = err;
+    const anyErr = err;
 
-  if (anyErr.context && anyErr.context.error) {
-    const backendError = anyErr.context.error;
-    if (backendError.details) {
-      displayErrorMessage = backendError.details;
-    } else if (backendError.error) {
-      displayErrorMessage = backendError.error;
-    } else if (anyErr.message) {
+    // 1) Versuche, die Fehlermeldung aus dem Edge-Function-Body zu holen (falls vorhanden)
+    if (anyErr && anyErr.context && anyErr.context.error) {
+      const backendError = anyErr.context.error;
+
+      if (typeof backendError === "string") {
+        displayErrorMessage = backendError;
+      } else if (backendError.details) {
+        displayErrorMessage = backendError.details;
+      } else if (backendError.error) {
+        displayErrorMessage = backendError.error;
+      } else if (anyErr.message) {
+        displayErrorMessage = anyErr.message;
+      }
+    } else if (anyErr && anyErr.message) {
       displayErrorMessage = anyErr.message;
     }
-  } else if (anyErr.message) {
-    displayErrorMessage = anyErr.message;
-  }
 
-  // ❗ Nur "Kein passender Jet gefunden" mappen wir um,
-  // alles andere (z.B. Airport nicht gefunden) zeigen wir 1:1 an.
-  if (displayErrorMessage.includes("Kein passender Jet gefunden")) {
-    displayErrorMessage =
-      "Kein passender Jet gefunden. Prüfe Vorlaufzeit, Jet-Reichweite oder Sitzanzahl.";
-  }
+    // 2) Spezieller Fall: Supabase meldet nur "non-2xx status code"
+    if (
+      displayErrorMessage.includes("non-2xx status code") ||
+      displayErrorMessage.includes("FunctionsHttpError")
+    ) {
+      // → Wir wissen: Die Edge Function hat 400 zurückgegeben,
+      //   meistens weil kein Jet die Strecke schafft / Vorlaufzeit etc.
+      displayErrorMessage =
+        "Kein passender Jet gefunden. Vermutlich reicht die Jet-Reichweite oder Vorlaufzeit nicht aus. " +
+        "Bitte wähle eine andere Route, einen späteren Abflugzeitpunkt oder reduziere die Anforderungen.";
+    }
 
-  showToast(`❌ Fehler: ${displayErrorMessage}`, "error");
-  setSmartResult({ error: true, message: displayErrorMessage });
-} finally {
-  setLoading(false);
-}
+    // 3) Spezieller Text aus dem Backend noch einmal schön formulieren
+    if (displayErrorMessage.includes("Kein passender Jet gefunden")) {
+      displayErrorMessage =
+        "Kein passender Jet gefunden. Prüfe Vorlaufzeit, Jet-Reichweite oder Sitzanzahl und passe deine Anfrage an.";
+    }
+
+    showToast(`❌ Fehler: ${displayErrorMessage}`, "error");
+    setSmartResult({ error: true, message: displayErrorMessage });
+  } finally {
+    setLoading(false);
+  }
 
   };
 

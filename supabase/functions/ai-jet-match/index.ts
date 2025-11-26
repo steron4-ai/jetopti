@@ -1,5 +1,6 @@
 // supabase/functions/ai-jet-match/index.ts
 // ✅ AI Jet Match mit Airports aus DB + JetOpti Pricing Engine V2 (Coca-Cola-Rezept)
+// + ✨ Realistische Reichweiten-Logik (Main vs Ferry vs Total)
 
 // @ts-ignore
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -271,36 +272,26 @@ Deno.serve(async (req: Request) => {
     console.log('✅ Supabase Client erstellt');
 
     // 1) Flughäfen aus DB
-  const { data: airportsRaw, error: airportsError } = await supabaseAdmin
-  .from('airports')
-  .select('iata, city, lat, lon');
-
-if (airportsError) {
-  console.error('❌ Airports-DB-Error:', airportsError);
-  throw new Error(`Airport-Daten konnten nicht geladen werden: ${airportsError.message}`);
-}
-
-if (!airportsRaw || airportsRaw.length === 0) {
-  throw new Error('Keine Flughäfen in der Datenbank gefunden.');
-}
-
-// ✨ NEU: defensiv normalisieren
-const airports: Airport[] = airportsRaw.map((a: any) => ({
-  iata: a.iata,
-  city: a.city,
-  lat: Number(a.lat),
-  lon: Number(a.lon),
-}));
-
+    const { data: airportsRaw, error: airportsError } = await supabaseAdmin
+      .from('airports')
+      .select('iata, city, lat, lon');
 
     if (airportsError) {
       console.error('❌ Airports-DB-Error:', airportsError);
       throw new Error(`Airport-Daten konnten nicht geladen werden: ${airportsError.message}`);
     }
 
-    if (!airports || airports.length === 0) {
+    if (!airportsRaw || airportsRaw.length === 0) {
       throw new Error('Keine Flughäfen in der Datenbank gefunden.');
     }
+
+    // ✨ NEU: defensiv normalisieren
+    const airports: Airport[] = airportsRaw.map((a: any) => ({
+      iata: a.iata,
+      city: a.city,
+      lat: Number(a.lat),
+      lon: Number(a.lon),
+    }));
 
     console.log('✅ Flughäfen verfügbar:', airports.length);
 
@@ -419,19 +410,56 @@ const airports: Airport[] = airportsRaw.map((a: any) => ({
         const hoursUntilFlight =
           (departureTime.getTime() - now.getTime()) / 3600000;
 
+        // --------------------------------------------------------
+        // ✨ NEU: Reichweiten-Prüfung (realistisch)
+        // --------------------------------------------------------
+        
+        // 1) Hauptstrecke darf nicht größer sein als Reichweite
+        if (routeDistance > jet.range) {
+          console.log("[SKIP] Hauptstrecke außerhalb der Reichweite", {
+            jet: jet.name,
+            routeDistance,
+            jetRange: jet.range
+          });
+          return null;
+        }
+
+        // 2) Anflugdistanz darf max. 60% der Reichweite sein
+        if (ferryDistanceKm > jet.range * 0.6) {
+          console.log("[SKIP] Anflugdistanz zu weit", {
+            jet: jet.name,
+            ferryDistanceKm,
+            maxAllowed: jet.range * 0.6
+          });
+          return null;
+        }
+
+        // 3) Kombination Hauptstrecke + Anflug muss realistisch sein
+        if ((routeDistance + ferryDistanceKm) > jet.range * 0.85) {
+          console.log("[SKIP] Gesamtflug (Route + Ferry) zu weit", {
+            jet: jet.name,
+            routeDistance,
+            ferryDistanceKm,
+            jetRange: jet.range
+          });
+          return null;
+        }
+
+        // --------------------------------------------------------
+        // ENDE NEU: Reichweiten-Prüfung
+        // --------------------------------------------------------
+
         const isSuitable =
           jet.seats >= passengers &&
-          jet.range >= routeDistance &&
+          // jet.range >= routeDistance && // Entfernt, da oben bereits strikter geprüft
           hoursUntilFlight >= totalLeadTimeHours;
 
         if (!isSuitable) {
           console.log('[FILTER-OUT]', {
             jet: jet.name,
             seatsOk: jet.seats >= passengers,
-            rangeOk: jet.range >= routeDistance,
             leadTimeOk: hoursUntilFlight >= totalLeadTimeHours,
-            range: jet.range,
-            routeDistance,
+            seats: jet.seats,
             hoursUntilFlight,
             totalLeadTimeHours
           });
