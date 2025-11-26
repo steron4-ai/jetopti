@@ -338,6 +338,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [directPrice, setDirectPrice] = useState(null);
+  const [directPriceLoading, setDirectPriceLoading] = useState(false);
+  const [directPriceError, setDirectPriceError] = useState(null);
 
   const [smartResult, setSmartResult] = useState(null);
   const [showHotDeals, setShowHotDeals] = useState(false);
@@ -470,32 +473,92 @@ const resolveAirport = (input) => {
     return { distanceKm, durationHrs, start, dest };
   };
 
-  // Preisberechnung
+    // Preisberechnung (Fallback, falls Pricing-Engine nicht greift)
   const calculatePrice = (distanceKm, jet, roundtrip = false) => {
-    let base = 2500;
-    let perKm = 25;
+    if (!jet || !distanceKm || distanceKm <= 0) return 0;
 
-    if (jet.price_per_km) {
-      perKm = jet.price_per_km;
-    } else if (jet.type) {
-      if (jet.type === "Very Light Jet") perKm = 22;
-      else if (jet.type === "Light Jet") perKm = 25;
-      else if (jet.type === "Super Light Jet") perKm = 30;
-      else if (jet.type === "Midsize Jet") perKm = 28;
-      else if (jet.type === "Super Midsize Jet") perKm = 32;
-      else if (jet.type === "Heavy Jet") perKm = 35;
-      else if (jet.type === "Ultra Long Range") perKm = 40;
-      else perKm = 27;
+    const typeKey = (jet.type || "").toLowerCase();
+
+    // Stundensätze pro Jet-Typ (Pi-mal-Daumen)
+    const hourlyRateMap = {
+      "very light jet": 2500,
+      "light jet": 3000,
+      "super light jet": 3400,
+      "midsize jet": 3800,
+      "super midsize jet": 4200,
+      "heavy jet": 4800,
+      "ultra long range": 5500,
+    };
+
+    let hourlyRate =
+      Number(jet.price_per_hour) > 0
+        ? Number(jet.price_per_hour)
+        : hourlyRateMap[typeKey] || 3500;
+
+    // Cruise-Speed je Jet-Typ (km/h)
+    const cruiseSpeedKmHMap = {
+      "very light jet": 600,
+      "light jet": 700,
+      "super light jet": 740,
+      "midsize jet": 770,
+      "super midsize jet": 800,
+      "heavy jet": 830,
+      "ultra long range": 880,
+    };
+
+    const cruiseSpeedKmH = cruiseSpeedKmHMap[typeKey] || 750;
+
+    const rawFlightHours = distanceKm / cruiseSpeedKmH;
+
+    // Minimum-Blockzeiten (Abrechnung in vollen Blöcken)
+    const minBlockMap = {
+      "very light jet": 1.0,
+      "light jet": 1.2,
+      "super light jet": 1.3,
+      "midsize jet": 1.5,
+      "super midsize jet": 2.0,
+      "heavy jet": 2.5,
+      "ultra long range": 3.0,
+    };
+
+    const minBlock = minBlockMap[typeKey] || 1.5;
+    const flightHours = Math.max(rawFlightHours, minBlock);
+
+    const baseFlightCost = flightHours * hourlyRate;
+
+    // Crew- & Handlingkosten (für Direktflug ohne großen Leerflug)
+    let crewFee = 0;
+    let landingFee = 0;
+    if (distanceKm <= 1200) {
+      crewFee = 800;
+      landingFee = 400;
+    } else if (distanceKm <= 3500) {
+      crewFee = 1500;
+      landingFee = 800;
+    } else {
+      crewFee = 2500;
+      landingFee = 1500;
     }
 
-    let total = base + distanceKm * perKm;
-    total = Math.max(total, jet.min_booking_price || 5000);
+    // Nachfrage-Faktor: Langstrecken & „Premium“ etwas teurer
+    let demandFactor = 1.0;
+    if (distanceKm >= 7000) demandFactor = 1.12;
+    else if (distanceKm >= 4000) demandFactor = 1.08;
+    else if (distanceKm >= 2000) demandFactor = 1.04;
+
+    let total = (baseFlightCost + crewFee + landingFee) * demandFactor;
+
+    const minPrice = Number(jet.min_booking_price) || 15000;
+    if (total < minPrice) total = minPrice;
 
     if (roundtrip) {
-      total = total * 1.8;
+      total *= 1.8;
     }
-    return total.toFixed(0);
+
+    return Math.round(total);
   };
+
+
     // Schöne Anzeige für IATA -> "Stadt (IATA)"
   const formatAirportLabel = (input) => {
     if (!input) return "";
@@ -925,10 +988,72 @@ const resolveAirport = (input) => {
       setRouteInfo(null);
     }
   }, [formData.from, formData.to, formData.roundtrip, airports, booking]);
+  // Direktbuchungs-Preis automatisch neu berechnen, wenn Route / Jet / Datum sich ändern
+  useEffect(() => {
+    const updatePrice = async () => {
+      if (!routeInfo || !booking) {
+        setDirectPrice(null);
+        setDirectPriceError(null);
+        return;
+      }
+      await fetchDirectPrice(routeInfo, booking);
+    };
+
+    updatePrice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    routeInfo,
+    booking,
+    formData.passengers,
+    formData.roundtrip,
+    formData.dateTime,
+  ]);
 
   // --------------------------------------------------
   // Handler
   // --------------------------------------------------
+    // Preis vom Backend holen (Pricing Engine V2)
+  const fetchDirectPrice = async (route, currentBooking) => {
+    if (!route || !currentBooking) return null;
+
+    try {
+      setDirectPriceLoading(true);
+      setDirectPriceError(null);
+
+      const { data, error } = await supabase.functions.invoke(
+        "direct-price-quote",
+        {
+          body: {
+            jetId: currentBooking.id,
+            fromIATA: route.start.iata,
+            toIATA: route.dest.iata,
+            passengers: parseInt(formData.passengers, 10) || 1,
+            dateTime: formData.dateTime,
+            roundtrip: formData.roundtrip,
+          },
+        }
+      );
+
+      if (error) throw error;
+
+      if (!data || typeof data.price !== "number") {
+        throw new Error("Preis konnte nicht berechnet werden.");
+      }
+
+      setDirectPrice(data.price);
+      return data.price;
+    } catch (err) {
+      console.error("Fehler beim Laden des Direktpreises:", err);
+      setDirectPrice(null);
+      setDirectPriceError(
+        err.message || "Preis konnte nicht berechnet werden."
+      );
+      return null;
+    } finally {
+      setDirectPriceLoading(false);
+    }
+  };
+
   const handleSelectAirport = (field, airport) => {
     // Wir schreiben nur den IATA-Code ins Feld (z.B. "MUC", "LEJ")
     setFormData((prev) => ({
@@ -1065,14 +1190,25 @@ const resolveAirport = (input) => {
         .single();
       if (dbError) throw dbError;
 
-      // E-Mail an Kunden
+             // E-Mail an Kunden
       try {
         const kundenParams = {
           recipient_email: bookingData.customer_email,
-          subject: `Ihre JetOpti-Anfrage (${bookingEntry.id}) ist in Bearbeitung`,
+          subject:
+            "Ihre JetOpti-Anfrage (" +
+            bookingEntry.id +
+            ") ist in Bearbeitung",
           name_an: bookingData.customer_name,
-          nachricht: `Vielen Dank für Ihre Anfrage (ID: ${bookingEntry.id}) für die Route ${bookingData.from_location} → ${bookingData.to_location}. Wir prüfen die Verfügbarkeit bei der Charterfirma und melden uns in Kürze.`,
-          route: `${bookingData.from_location} → ${bookingData.to_location}`,
+          nachricht:
+            "Vielen Dank für Ihre Anfrage (ID: " +
+            bookingEntry.id +
+            ") für die Route " +
+            bookingData.from_location +
+            " -> " +
+            bookingData.to_location +
+            ". Wir prüfen die Verfügbarkeit bei der Charterfirma und melden uns in Kürze.",
+          route:
+            bookingData.from_location + " -> " + bookingData.to_location,
           jet_name: bookingData.jet_name,
           departure_date: new Date(
             bookingData.departure_date
@@ -1080,9 +1216,10 @@ const resolveAirport = (input) => {
           customer_name: bookingData.customer_name,
           customer_email: bookingData.customer_email,
           customer_phone: bookingData.customer_phone || "N/A",
-          total_price: bookingData.total_price.toLocaleString(),
+          total_price: Number(bookingData.total_price).toLocaleString(),
           booking_id: bookingEntry.id,
         };
+
         await emailjs.send(
           emailServiceId,
           templateGenerisch,
@@ -1100,11 +1237,18 @@ const resolveAirport = (input) => {
       try {
         const charterParams = {
           recipient_email: "steron4@web.de",
-          subject: `NEUE ANFRAGE (${bookingEntry.id}): ${bookingData.from_location} → ${bookingData.to_location}`,
+          subject:
+            "NEUE ANFRAGE (" +
+            bookingEntry.id +
+            "): " +
+            bookingData.from_location +
+            " -> " +
+            bookingData.to_location,
           name_an: "JetOpti Partner",
           nachricht:
             "Eine neue Buchungsanfrage ist eingetroffen. Bitte prüfen Sie die Details in Ihrem Dashboard und bestätigen oder lehnen Sie die Anfrage ab.",
-          route: `${bookingData.from_location} → ${bookingData.to_location}`,
+          route:
+            bookingData.from_location + " -> " + bookingData.to_location,
           jet_name: bookingData.jet_name,
           departure_date: new Date(
             bookingData.departure_date
@@ -1112,9 +1256,10 @@ const resolveAirport = (input) => {
           customer_name: bookingData.customer_name,
           customer_email: bookingData.customer_email,
           customer_phone: bookingData.customer_phone || "N/A",
-          total_price: bookingData.total_price.toLocaleString(),
+          total_price: Number(bookingData.total_price).toLocaleString(),
           booking_id: bookingEntry.id,
         };
+
         await emailjs.send(
           emailServiceId,
           templateGenerisch,
@@ -1127,6 +1272,8 @@ const resolveAirport = (input) => {
           emailError
         );
       }
+
+
 
       const { error: jetUpdateError } = await supabase
         .from("jets")
@@ -1160,7 +1307,7 @@ const resolveAirport = (input) => {
     }
   };
 
-  const handleDirectBooking = async (e) => {
+    const handleDirectBooking = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -1226,14 +1373,25 @@ const resolveAirport = (input) => {
 
       if (dbError) throw dbError;
 
-      // E-Mail an Kunden
+            // E-Mail an Kunden
       try {
         const kundenParams = {
           recipient_email: bookingData.customer_email,
-          subject: `Ihre JetOpti-Anfrage (${bookingEntry.id}) ist in Bearbeitung`,
+          subject:
+            "Ihre JetOpti-Anfrage (" +
+            bookingEntry.id +
+            ") ist in Bearbeitung",
           name_an: bookingData.customer_name,
-          nachricht: `Vielen Dank für Ihre Anfrage (ID: ${bookingEntry.id}) für die Route ${bookingData.from_location} → ${bookingData.to_location}. Wir prüfen die Verfügbarkeit bei der Charterfirma und melden uns in Kürze.`,
-          route: `${bookingData.from_location} → ${bookingData.to_location}`,
+          nachricht:
+            "Vielen Dank für Ihre Anfrage (ID: " +
+            bookingEntry.id +
+            ") für die Route " +
+            bookingData.from_location +
+            " -> " +
+            bookingData.to_location +
+            ". Wir prüfen die Verfügbarkeit bei der Charterfirma und melden uns in Kürze.",
+          route:
+            bookingData.from_location + " -> " + bookingData.to_location,
           jet_name: bookingData.jet_name,
           departure_date: new Date(
             bookingData.departure_date
@@ -1241,9 +1399,10 @@ const resolveAirport = (input) => {
           customer_name: bookingData.customer_name,
           customer_email: bookingData.customer_email,
           customer_phone: bookingData.customer_phone || "N/A",
-          total_price: bookingData.total_price.toLocaleString(),
+          total_price: Number(bookingData.total_price).toLocaleString(),
           booking_id: bookingEntry.id,
         };
+
         await emailjs.send(
           emailServiceId,
           templateGenerisch,
@@ -1261,11 +1420,18 @@ const resolveAirport = (input) => {
       try {
         const charterParams = {
           recipient_email: "steron4@web.de",
-          subject: `NEUE ANFRAGE (${bookingEntry.id}): ${bookingData.from_location} → ${bookingData.to_location}`,
+          subject:
+            "NEUE ANFRAGE (" +
+            bookingEntry.id +
+            "): " +
+            bookingData.from_location +
+            " -> " +
+            bookingData.to_location,
           name_an: "JetOpti Partner",
           nachricht:
             "Eine neue Buchungsanfrage ist eingetroffen. Bitte prüfen Sie die Details in Ihrem Dashboard und bestätigen oder lehnen Sie die Anfrage ab.",
-          route: `${bookingData.from_location} → ${bookingData.to_location}`,
+          route:
+            bookingData.from_location + " -> " + bookingData.to_location,
           jet_name: bookingData.jet_name,
           departure_date: new Date(
             bookingData.departure_date
@@ -1273,9 +1439,10 @@ const resolveAirport = (input) => {
           customer_name: bookingData.customer_name,
           customer_email: bookingData.customer_email,
           customer_phone: bookingData.customer_phone || "N/A",
-          total_price: bookingData.total_price.toLocaleString(),
+          total_price: Number(bookingData.total_price).toLocaleString(),
           booking_id: bookingEntry.id,
         };
+
         await emailjs.send(
           emailServiceId,
           templateGenerisch,
@@ -1289,6 +1456,10 @@ const resolveAirport = (input) => {
         );
       }
 
+
+      // --------------------------------------------------
+      // Jet reservieren
+      // --------------------------------------------------
       const { error: jetUpdateError } = await supabase
         .from("jets")
         .update({ status: "wartung" })
@@ -1321,6 +1492,7 @@ const resolveAirport = (input) => {
     }
   };
 
+
    const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     const newValue = type === "checkbox" ? checked : value;
@@ -1347,11 +1519,7 @@ const resolveAirport = (input) => {
   };
 
 
-  const estimatedPrice =
-    routeInfo && booking
-      ? calculatePrice(routeInfo.distanceKm, booking, formData.roundtrip)
-      : null;
-
+  
   // --------------------------------------------------
   // JSX / Render
   // --------------------------------------------------
@@ -2064,25 +2232,43 @@ const resolveAirport = (input) => {
                 onChange={handleChange}
               />
 
-              {routeInfo && (
+                            {routeInfo && (
                 <div className="route-summary">
                   <p>
                     ✈️ Distanz:{" "}
-                    <strong>
-                      {routeInfo.distanceKm.toFixed(0)} km
-                    </strong>
+                    <strong>{routeInfo.distanceKm.toFixed(0)} km</strong>
                   </p>
                   <p>
                     ⏱️ Flugdauer:{" "}
-                    <strong>
-                      {routeInfo.durationHrs.toFixed(1)} Stunden
-                    </strong>
+                    <strong>{routeInfo.durationHrs.toFixed(1)} Stunden</strong>
                   </p>
                   <p className="price-line">
                     💶 Geschätzter Preis:{" "}
-                    <strong>€{estimatedPrice}</strong> (Min. €
+                    {directPriceLoading && (
+                      <strong>Wird berechnet...</strong>
+                    )}
+                    {!directPriceLoading && directPrice != null && (
+                      <strong>
+                        €{directPrice.toLocaleString()}
+                      </strong>
+                    )}
+                    {!directPriceLoading && directPrice == null && (
+                      <strong>–</strong>
+                    )}{" "}
+                    (Min. €
                     {booking.min_booking_price?.toLocaleString()})
                   </p>
+                  {directPriceError && (
+                    <p
+                      style={{
+                        color: "#dc2626",
+                        fontSize: "0.9rem",
+                        marginTop: "4px",
+                      }}
+                    >
+                      ⚠️ {directPriceError}
+                    </p>
+                  )}
                   {formData.roundtrip && (
                     <p className="roundtrip-note">
                       ↔️ Hin- und Rückflug inklusive
@@ -2090,6 +2276,7 @@ const resolveAirport = (input) => {
                   )}
                 </div>
               )}
+
 
               <div className="buttons">
                 <button

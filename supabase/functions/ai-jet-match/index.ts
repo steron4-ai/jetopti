@@ -1,966 +1,558 @@
-/* src/styles/landing.css */
+// supabase/functions/ai-jet-match/index.ts
+// ✅ AI Jet Match mit Airports aus DB + JetOpti Pricing Engine V2 (Coca-Cola-Rezept)
 
-/* ============================================
-   FORCE SCROLL - CRITICAL FIX
-============================================ */
-html {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+// @ts-ignore
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
+
+declare const Deno: {
+  serve: (handler: (req: Request) => Promise<Response> | Response) => void;
+  env: {
+    get: (key: string) => string | undefined;
+  };
+};
+
+interface Jet {
+  id: string;
+  name: string;
+  type: string;
+  seats: number;
+  range: number;
+  status: string;
+  current_iata: string | null;
+  current_lat: number | null;
+  current_lng: number | null;
+  lead_time_hours: number | null;
+  min_booking_price: number | null;
+  home_base_iata: string | null;
+  year_built: number | null;
+  image_url: string | null;
+  gallery_urls: string[] | null;
+  company_id: string;
+  allow_empty_legs: boolean;
+  empty_leg_discount: number;
+  price_per_hour: number | null; // 💰 Stundenpreis aus Jets-Tabelle
 }
 
-body {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  min-height: 100vh !important;
+interface Airport {
+  iata: string;
+  city: string;
+  lat: number;
+  lon: number;
 }
 
-#root {
-  overflow: visible !important;
-  min-height: 100vh;
+interface RequestBody {
+  fromIATA: string;
+  toIATA: string;
+  passengers: number;
+  dateTime: string;
 }
 
-/* ============================================
-   RESET & BASE
-============================================ */
-.landing-page * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+// --------------------------------------------------------
+// GEO-HELPER
+// --------------------------------------------------------
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // km
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
-.landing-page {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-               Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
-  overflow-x: hidden;
-  min-height: auto;
+// --------------------------------------------------------
+// JETOPTI PRICING ENGINE V2 (Coca-Cola-Rezept)
+// --------------------------------------------------------
+
+// realistische Cruise-Speeds nach Jet-Segment
+function getCruiseSpeedKmH(jet: Jet): number {
+  const t = (jet.type || '').toLowerCase();
+  if (t.includes('very light')) return 620;
+  if (t.includes('light') && !t.includes('super')) return 700;
+  if (t.includes('super light')) return 740;
+  if (t.includes('midsize') && !t.includes('super')) return 780;
+  if (t.includes('super midsize')) return 820;
+  if (t.includes('heavy')) return 860;
+  if (t.includes('ultra long')) return 900;
+  if (t.includes('bbj') || t.includes('lineage') || t.includes('acj')) return 880;
+  // Fallback
+  return 780;
 }
 
-/* ============================================
-   NAVBAR
-============================================ */
-.navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+// Mindest-Blockzeit je Segment (Industrie-Standard)
+function getMinBlockHours(jet: Jet): number {
+  const t = (jet.type || '').toLowerCase();
+  if (t.includes('very light')) return 1.0;
+  if (t.includes('light')) return 1.5;
+  if (t.includes('super light')) return 1.5;
+  if (t.includes('midsize') && !t.includes('super')) return 2.0;
+  if (t.includes('super midsize')) return 2.0;
+  if (t.includes('heavy')) return 2.5;
+  if (t.includes('ultra long')) return 3.0;
+  return 1.5;
 }
 
-.nav-container {
-  padding: 20px 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.nav-menu {
-  display: flex;
-  gap: 45px;
-  align-items: center;
-}
-
-.nav-link {
-  color: #333;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 17px;
-  transition: all 0.3s ease;
-  position: relative;
-  white-space: nowrap;
-}
-
-.nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: -5px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: #667eea;
-  transition: width 0.3s ease;
-}
-
-.nav-link:hover {
-  color: #667eea;
-}
-
-.nav-link:hover::after {
-  width: 100%;
-}
-
-.btn-nav {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 14px 34px;
-  border-radius: 25px;
-  text-decoration: none;
-  font-weight: 700;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-  white-space: nowrap;
-}
-
-.btn-nav:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-/* ============================================
-   HERO SECTION
-============================================ */
-.hero {
-  min-height: auto;
-  padding: 120px 20px 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.hero::before {
-  content: '';
-  position: absolute;
-  width: 500px;
-  height: 500px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  top: -200px;
-  right: -200px;
-  animation: float 20s infinite ease-in-out;
-}
-
-.hero::after {
-  content: '';
-  position: absolute;
-  width: 400px;
-  height: 400px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  bottom: -150px;
-  left: -150px;
-  animation: float 25s infinite ease-in-out reverse;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px) translateX(0px);
+// Crew Fee (Duty Time > 4h)
+function calculateCrewFee(billableHours: number, jet: Jet): number {
+  if (billableHours <= 4) return 0;
+  const t = (jet.type || '').toLowerCase();
+  let crewCount = 2;
+  if (t.includes('heavy') || t.includes('ultra long')) {
+    crewCount = 3; // Langstrecke oft 3 Piloten
   }
-  50% {
-    transform: translateY(30px) translateX(20px);
+  const crewBase = 400; // €/Crew – konservativ
+  return crewCount * crewBase;
+}
+
+// Premium-Airports für höhere Gebühren / Nachfrage
+const PREMIUM_AIRPORTS = new Set([
+  'LHR', 'LGW', 'LCY', 'CDG', 'ORY',
+  'FRA', 'MUC', 'DXB', 'DWC', 'DOH',
+  'JED', 'RUH', 'HKG', 'SIN', 'NRT',
+  'JFK', 'EWR', 'LGA', 'LAX', 'VNY',
+  'MIA', 'SFO', 'LAS',
+  // ✨ Sommer-/Luxury-Hotspots
+  'NCE', // Nizza
+  'IBZ', // Ibiza
+  'OLB'  // Olbia / Costa Smeralda
+]);
+
+
+// Landing Fees abhängig von Airport-Größe (stark vereinfacht)
+function getAirportLandingFee(airport: Airport): number {
+  const code = (airport.iata || '').toUpperCase();
+  if (PREMIUM_AIRPORTS.has(code)) return 900; // Premium Hubs
+  // Kleine / mittlere Airports
+  return 350;
+}
+
+function calculateLandingFees(start: Airport, dest: Airport): number {
+  return getAirportLandingFee(start) + getAirportLandingFee(dest);
+}
+
+// Demand-Faktoren (Weekend, Last-Minute, Long-Haul, Premium-Route)
+function calculateDemandFactor(
+  mainDistanceKm: number,
+  start: Airport,
+  dest: Airport,
+  departureTime: Date,
+  now: Date,
+  isEmptyLeg: boolean
+): number {
+  let factor = 1.0;
+
+  const startCode = (start.iata || '').toUpperCase();
+  const destCode = (dest.iata || '').toUpperCase();
+
+  const hoursUntilFlight = (departureTime.getTime() - now.getTime()) / 3600000;
+
+  const isWeekend = [5, 6, 0].includes(departureTime.getUTCDay()); // Fr, Sa, So
+  const isPremiumRoute = PREMIUM_AIRPORTS.has(startCode) || PREMIUM_AIRPORTS.has(destCode);
+  const isLongHaul = mainDistanceKm > 6000; // grob interkontinental
+
+  // Empty Legs sollen attraktiv sein → weniger Aufschläge
+  if (!isEmptyLeg) {
+    if (isWeekend) factor += 0.10;
+    if (hoursUntilFlight < 24) factor += 0.20; // Last Minute
+    if (isLongHaul) factor += 0.10;
   }
+
+  if (isPremiumRoute) {
+    factor += 0.15; // z.B. LHR, JFK, DXB
+  }
+
+  return factor;
 }
 
-.hero-content {
-  max-width: 900px;
-  text-align: center;
-  position: relative;
-  z-index: 1;
-  color: white;
-}
+type PriceContext = {
+  mainDistanceKm: number;
+  ferryDistanceKm?: number;
+  jet: Jet;
+  startAirport: Airport;
+  destAirport: Airport;
+  departureTime: Date;
+  now: Date;
+  isEmptyLeg?: boolean;
+  enforceMinPrice?: boolean;
+};
 
-.hero-logo-color {
-  width: 350px;
-  max-width: 90%;
-  margin-bottom: 40px;
-  animation: fadeInDown 1s ease;
-  filter: none !important;
-  -webkit-filter: none !important;
-  mix-blend-mode: normal !important;
-}
+/**
+ * JetOpti Pricing Engine V2
+ * - Basis: Operator-Hourly-Rate (price_per_hour)
+ * - Blocktime (inkl. Positioning) × Stundenpreis
+ * - Mindestpreis, Crew Fees, Landing Fees, Demand-Faktoren
+ */
+function calculatePriceV2(ctx: PriceContext): number {
+  const {
+    mainDistanceKm,
+    ferryDistanceKm = 0,
+    jet,
+    startAirport,
+    destAirport,
+    departureTime,
+    now,
+    isEmptyLeg = false,
+    enforceMinPrice = true
+  } = ctx;
 
-.hero h1 {
-  font-size: 64px;
-  font-weight: 900;
-  margin-bottom: 24px;
-  line-height: 1.1;
-  letter-spacing: -2px;
-  animation: fadeInUp 1s ease 0.2s both;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
+  const cruise = getCruiseSpeedKmH(jet);
+  const hourlyRate = jet.price_per_hour || 0;
 
-.hero-subtitle {
-  font-size: 22px;
-  margin-bottom: 40px;
-  opacity: 0.95;
-  font-weight: 300;
-  line-height: 1.5;
-  animation: fadeInUp 1s ease 0.4s both;
-  max-width: 700px;
-  margin-left: auto;
-  margin-right: auto;
-}
+  if (!hourlyRate || hourlyRate <= 0) {
+    // Jet ohne gültigen Stundenpreis → nicht buchbar
+    return Number.POSITIVE_INFINITY;
+  }
 
-.hero-cta {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-bottom: 60px;
-  animation: fadeInUp 1s ease 0.6s both;
-}
+  const mainHours = mainDistanceKm > 0 ? mainDistanceKm / cruise : 0;
+  const ferryHours = ferryDistanceKm > 0 ? ferryDistanceKm / cruise : 0;
 
-.btn-primary {
-  background: white;
-  color: #667eea;
-  padding: 18px 45px;
-  border-radius: 50px;
-  font-size: 17px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: all 0.3s ease;
-  display: inline-block;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
+  let billableHours = mainHours + ferryHours;
 
-.btn-primary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-  background: #f0f0f0;
-}
+  // Mindestblockzeit je Segment
+  const minBlock = getMinBlockHours(jet);
+  if (billableHours < minBlock) {
+    billableHours = minBlock;
+  }
 
-.btn-secondary {
-  background: transparent;
-  color: white;
-  padding: 18px 45px;
-  border-radius: 50px;
-  font-size: 17px;
-  font-weight: 700;
-  text-decoration: none;
-  border: 3px solid white;
-  transition: all 0.3s ease;
-  display: inline-block;
-}
+  // Basiskosten
+  let total = billableHours * hourlyRate;
 
-.btn-secondary:hover {
-  background: white;
-  color: #667eea;
-  transform: translateY(-3px);
-}
+  // Crew Fee
+  const crewFee = calculateCrewFee(billableHours, jet);
+  total += crewFee;
 
-.hero-stats {
-  display: flex;
-  gap: 60px;
-  justify-content: center;
-  flex-wrap: wrap;
-  animation: fadeInUp 1s ease 0.8s both;
-  margin-bottom: 0;
-}
+  // Landing Fees (Start + Ziel)
+  const landingFees = calculateLandingFees(startAirport, destAirport);
+  total += landingFees;
 
-.stat {
-  text-align: center;
-}
-
-.stat-number {
-  font-size: 48px;
-  font-weight: 900;
-  margin-bottom: 10px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  letter-spacing: -1px;
-}
-
-.stat-label {
-  font-size: 14px;
-  opacity: 0.9;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-weight: 600;
-}
-
-/* ============================================
-   FEATURES SECTION
-============================================ */
-.features-section {
-  padding: 100px 20px;
-  background: linear-gradient(180deg, #f8f9ff 0%, white 50%, #f8f9ff 100%);
-}
-
-.features-container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.features-header {
-  text-align: center;
-  margin-bottom: 80px;
-}
-
-.features-header h2 {
-  font-size: 52px;
-  font-weight: 900;
-  margin-bottom: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -1px;
-}
-
-.features-header p {
-  font-size: 22px;
-  color: #666;
-  font-weight: 300;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 40px;
-  margin-bottom: 40px;
-}
-
-.feature-card {
-  background: white;
-  border-radius: 24px;
-  padding: 0;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-  transition: all 0.4s ease;
-  overflow: hidden;
-}
-
-.feature-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.2);
-}
-
-/* Feature Image */
-.feature-image {
-  width: 100%;
-  height: 240px;
-  overflow: hidden;
-  position: relative;
-}
-
-.feature-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.4s ease;
-}
-
-.feature-card:hover .feature-image img {
-  transform: scale(1.05);
-}
-
-/* Feature Content */
-.feature-content {
-  padding: 40px;
-}
-
-.feature-icon {
-  display: none;
-}
-
-.feature-content h3 {
-  font-size: 26px;
-  font-weight: 700;
-  margin-bottom: 16px;
-  color: #1a1a2e;
-}
-
-.feature-content p {
-  font-size: 16px;
-  line-height: 1.7;
-  color: #666;
-  margin-bottom: 24px;
-}
-
-.feature-stat {
-  display: inline-block;
-  background: #667eea;
-  color: white;
-  padding: 10px 24px;
-  border-radius: 25px;
-  font-size: 14px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
-
-/* ============================================
-   HOW IT WORKS SECTION - FIXED VERSION
-============================================ */
-.how-it-works-section {
-  padding: 100px 20px;
-  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
-}
-
-.how-it-works-section .features-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.how-it-works-section .features-header {
-  text-align: center;
-  margin-bottom: 60px;
-}
-
-.how-it-works-section .features-header h2 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 15px;
-}
-
-.how-it-works-section .features-header p {
-  font-size: 1.2rem;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-/* Grid Layout */
-.how-it-works-section .features-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 40px;
-}
-
-/* Step Cards - Optimized height! */
-.how-it-works-section .feature-card {
-  position: relative;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 20px;
-  padding: 0;
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  transition: all 0.3s ease;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  height: 600px; /* Adjusted for 300px image */
-}
-
-.how-it-works-section .feature-card:hover {
-  transform: translateY(-8px);
-  border-color: #8b5cf6;
-  box-shadow: 0 12px 40px rgba(139, 92, 246, 0.3);
-}
-
-/* Step Number Badge */
-.step-number-badge {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 50px;
-  height: 50px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: white;
-  z-index: 10;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5);
-}
-
-/* Image Container - SHARP & FULL without white bars! */
-.how-it-works-section .feature-image {
-  width: 100%;
-  height: 300px; /* Optimal height */
-  overflow: hidden;
-  position: relative;
-  background: #f8f9fa; /* Light gray if any gaps */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.how-it-works-section .feature-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* COVER for sharp images! */
-  object-position: center top; /* Show top part (clouds etc) */
-  display: block;
-  image-rendering: -webkit-optimize-contrast; /* Sharp on webkit */
-  image-rendering: crisp-edges; /* Sharp rendering */
-}
-
-.how-it-works-section .feature-card:hover .feature-image img {
-  transform: scale(1.05); /* SAME hover effect as Features! */
-  transition: transform 0.4s ease;
-}
-
-/* Text Content */
-.how-it-works-section .feature-content {
-  padding: 30px 25px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.how-it-works-section .feature-content h3 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 0 0 10px 0;
-  line-height: 1.3;
-}
-
-.how-it-works-section .feature-content p {
-  font-size: 1rem;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.85);
-  margin: 0 0 15px 0;
-}
-
-/* Feature List */
-.step-features-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: auto;
-}
-
-.step-features-list span {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #ffffff;
-  padding: 8px 16px;
-  background: rgba(102, 126, 234, 0.15);
-  border-radius: 20px;
-  border: 1px solid rgba(102, 126, 234, 0.3);
-  white-space: nowrap;
-}
-
-/* Hide old icon styles */
-.how-it-works-section .feature-icon {
-  display: none !important;
-}
-
-/* Dual CTA Section */
-.how-cta-dual {
-  margin-top: 80px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 60px;
-  align-items: center;
-  max-width: 1000px;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 60px 40px;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.cta-column {
-  text-align: center;
-}
-
-.cta-column h3 {
-  font-size: 1.8rem;
-  color: white;
-  margin-bottom: 12px;
-}
-
-.cta-column > p {
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 25px;
-  font-size: 1.05rem;
-}
-
-.cta-subtitle {
-  margin-top: 15px;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.cta-divider {
-  width: 1px;
-  height: 200px;
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0),
-    rgba(102, 126, 234, 0.3),
-    rgba(255, 255, 255, 0)
+  // Nachfrage-Faktoren
+  const demandFactor = calculateDemandFactor(
+    mainDistanceKm,
+    startAirport,
+    destAirport,
+    departureTime,
+    now,
+    isEmptyLeg
   );
+  total *= demandFactor;
+
+  // Mindestpreis nur für reguläre Buchungen
+  if (enforceMinPrice && jet.min_booking_price && jet.min_booking_price > 0) {
+    if (total < jet.min_booking_price) {
+      total = jet.min_booking_price;
+    }
+  }
+
+  // Für Empty Legs: besser auf glatte Beträge runden
+  return Math.round(total);
 }
 
-.btn-primary-large,
-.btn-secondary-large {
-  display: inline-block;
-  padding: 16px 40px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  border-radius: 12px;
-  text-decoration: none;
-  transition: all 0.3s ease;
+// --------------------------------------------------------
+// MAIN HANDLER
+// --------------------------------------------------------
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    console.log('🚀 AI Jet Match gestartet (Pricing Engine V2)');
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    console.log('✅ Supabase Client erstellt');
+
+    // 1) Flughäfen aus DB
+  const { data: airportsRaw, error: airportsError } = await supabaseAdmin
+  .from('airports')
+  .select('iata, city, lat, lon');
+
+if (airportsError) {
+  console.error('❌ Airports-DB-Error:', airportsError);
+  throw new Error(`Airport-Daten konnten nicht geladen werden: ${airportsError.message}`);
 }
 
-.btn-primary-large {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+if (!airportsRaw || airportsRaw.length === 0) {
+  throw new Error('Keine Flughäfen in der Datenbank gefunden.');
 }
 
-.btn-primary-large:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-}
+// ✨ NEU: defensiv normalisieren
+const airports: Airport[] = airportsRaw.map((a: any) => ({
+  iata: a.iata,
+  city: a.city,
+  lat: Number(a.lat),
+  lon: Number(a.lon),
+}));
 
-.btn-secondary-large {
-  background: transparent;
-  color: white;
-  border: 2px solid rgba(102, 126, 234, 0.5);
-}
 
-.btn-secondary-large:hover {
-  background: rgba(102, 126, 234, 0.1);
-  border-color: #667eea;
-  transform: translateY(-2px);
-}
+    if (airportsError) {
+      console.error('❌ Airports-DB-Error:', airportsError);
+      throw new Error(`Airport-Daten konnten nicht geladen werden: ${airportsError.message}`);
+    }
 
-/* ============================================
-   FOOTER
-============================================ */
-.footer {
-  background: #1a1a2e;
-  color: white;
-  padding: 50px 20px;
-}
+    if (!airports || airports.length === 0) {
+      throw new Error('Keine Flughäfen in der Datenbank gefunden.');
+    }
 
-.footer-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
-}
+    console.log('✅ Flughäfen verfügbar:', airports.length);
 
-.footer-content p {
-  font-size: 16px;
-  opacity: 0.9;
-}
+    // 2) Request einlesen
+    const body: RequestBody = await req.json();
+    const { fromIATA, toIATA, passengers, dateTime } = body;
 
-.footer-links {
-  display: flex;
-  gap: 30px;
-}
+    console.log('📥 Anfrage:', { fromIATA, toIATA, passengers, dateTime });
 
-.footer-links a {
-  color: white;
-  text-decoration: none;
-  font-size: 15px;
-  transition: color 0.3s ease;
-  opacity: 0.8;
-}
+    const startAirport = airports.find(
+      (a: Airport) => a.iata.toUpperCase() === fromIATA.toUpperCase()
+    );
+    const destAirport = airports.find(
+      (a: Airport) => a.iata.toUpperCase() === toIATA.toUpperCase()
+    );
 
-.footer-links a:hover {
-  color: #667eea;
-  opacity: 1;
-}
+    console.log(
+      '🛫 Start-Airport:',
+      startAirport ? `${startAirport.city} (${startAirport.iata})` : 'NICHT GEFUNDEN'
+    );
+    console.log(
+      '🛬 Ziel-Airport:',
+      destAirport ? `${destAirport.city} (${destAirport.iata})` : 'NICHT GEFUNDEN'
+    );
 
-/* ============================================
-   ANIMATIONS
-============================================ */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
+    if (!startAirport || !destAirport) {
+      throw new Error(
+        `Start- oder Zielflughafen nicht gefunden. Start: ${fromIATA}, Ziel: ${toIATA}`
+      );
+    }
+
+    // 3) Verfügbare Jets laden
+    const { data: jetsData, error: jetsError } = await supabaseAdmin
+      .from('jets')
+      .select(
+        `
+        *,
+        company_jets!inner(company_id)
+      `
+      )
+      .eq('status', 'verfügbar');
+
+    if (jetsError) throw jetsError;
+
+    if (!jetsData || jetsData.length === 0) {
+      throw new Error('Keine verfügbaren Jets in der Datenbank gefunden.');
+    }
+
+    console.log('✅ Jets gefunden:', jetsData.length);
+
+    // 4) Route & Zeit
+    const routeDistance = calculateDistance(
+      startAirport.lat,
+      startAirport.lon,
+      destAirport.lat,
+      destAirport.lon
+    );
+    const departureTime = new Date(dateTime);
+    const now = new Date();
+
+    console.log('📊 Route-Distanz:', routeDistance.toFixed(0), 'km');
+    console.log(
+      '⏰ Stunden bis Abflug:',
+      ((departureTime.getTime() - now.getTime()) / 3600000).toFixed(1),
+      'h'
+    );
+
+    // 5) Jets filtern & bewerten
+    const candidates = (jetsData as any[])
+      .map((jetRow: any) => {
+        const jet: Jet = {
+          ...jetRow,
+          company_id: jetRow.company_jets[0]?.company_id,
+          gallery_urls:
+            typeof jetRow.gallery_urls === 'string'
+              ? JSON.parse(jetRow.gallery_urls)
+              : jetRow.gallery_urls,
+          allow_empty_legs: jetRow.allow_empty_legs || false,
+          empty_leg_discount: jetRow.empty_leg_discount || 50,
+          price_per_hour: jetRow.price_per_hour ?? null
+        };
+
+        // Ohne gültigen Stundenpreis → nicht matchen
+        if (!jet.price_per_hour || jet.price_per_hour <= 0) {
+          console.warn('[SKIP] Jet ohne gültigen Stundenpreis:', jet.name, jet.id);
+          return null;
+        }
+
+        // Ohne Position → nicht matchen
+        if (
+          jet.current_lat == null ||
+          jet.current_lng == null ||
+          Number.isNaN(jet.current_lat) ||
+          Number.isNaN(jet.current_lng)
+        ) {
+          console.warn(
+            '[SKIP] Jet ohne gültige Position:',
+            jet.name,
+            jet.id,
+            jet.current_lat,
+            jet.current_lng
+          );
+          return null;
+        }
+
+        const ferryDistanceKm = calculateDistance(
+          startAirport.lat,
+          startAirport.lon,
+          jet.current_lat,
+          jet.current_lng
+        );
+
+        // gleiche Lead-Time-Logik wie bisher (für Matching)
+        const ferryFlightDurationHours = ferryDistanceKm / 800;
+        const totalLeadTimeHours = (jet.lead_time_hours || 4) + ferryFlightDurationHours;
+        const hoursUntilFlight =
+          (departureTime.getTime() - now.getTime()) / 3600000;
+
+        const isSuitable =
+          jet.seats >= passengers &&
+          jet.range >= routeDistance &&
+          hoursUntilFlight >= totalLeadTimeHours;
+
+        if (!isSuitable) {
+          console.log('[FILTER-OUT]', {
+            jet: jet.name,
+            seatsOk: jet.seats >= passengers,
+            rangeOk: jet.range >= routeDistance,
+            leadTimeOk: hoursUntilFlight >= totalLeadTimeHours,
+            range: jet.range,
+            routeDistance,
+            hoursUntilFlight,
+            totalLeadTimeHours
+          });
+          return null;
+        }
+
+        // ✨ NEU: Preis mit Pricing Engine V2
+        const price = calculatePriceV2({
+          mainDistanceKm: routeDistance,
+          ferryDistanceKm,
+          jet,
+          startAirport,
+          destAirport,
+          departureTime,
+          now,
+          isEmptyLeg: false,
+          enforceMinPrice: true
+        });
+
+        // ✨ Empty-Leg-Infos auch mit V2 berechnet
+        let emptyLegInfo: any = null;
+        if (jet.allow_empty_legs && ferryDistanceKm > 0) {
+          const jetLocationAirport =
+            airports.find(
+              (a: Airport) =>
+                a.iata.toUpperCase() === (jet.current_iata || '').toUpperCase()
+            ) || startAirport;
+
+          const normalEmptyLegPrice = calculatePriceV2({
+            mainDistanceKm: ferryDistanceKm,
+            ferryDistanceKm: 0,
+            jet,
+            startAirport: jetLocationAirport,
+            destAirport: startAirport,
+            departureTime,
+            now,
+            isEmptyLeg: true,
+            enforceMinPrice: false // Empty Legs dürfen unter Mindestpreis sein
+          });
+
+          const discount = jet.empty_leg_discount || 50;
+          const discountedPrice = Math.round(
+            normalEmptyLegPrice * (1 - discount / 100)
+          );
+
+          emptyLegInfo = {
+            shouldCreateEmptyLeg: true,
+            ferryRoute: {
+              from_iata: jet.current_iata,
+              from_lat: jet.current_lat,
+              from_lng: jet.current_lng,
+              to_iata: startAirport.iata,
+              to_lat: startAirport.lat,
+              to_lng: startAirport.lon
+            },
+            ferryDistanceKm,
+            discount,
+            normalPrice: normalEmptyLegPrice,
+            discountedPrice
+          };
+        }
+
+        return {
+          jet,
+          ferryDistanceKm,
+          totalLeadTimeHours,
+          price,
+          emptyLegInfo
+        };
+      })
+      .filter(Boolean) as any[];
+
+    console.log('✅ Geeignete Jets gefunden:', candidates.length);
+
+    if (candidates.length === 0) {
+      const hoursUntilFlight =
+        (departureTime.getTime() - now.getTime()) / 3600000;
+      throw new Error(
+        `Kein passender Jet gefunden. Stunden bis Abflug: ${hoursUntilFlight.toFixed(
+          1
+        )}h. Bitte wählen Sie eine spätere Abflugzeit (mindestens 6–8 Stunden), passen Sie die Passagierzahl an oder wählen Sie eine andere Route.`
+      );
+    }
+
+    candidates.sort((a: any, b: any) => a.price - b.price);
+    const bestMatch = candidates[0];
+
+    console.log('✅ Bester Match:', bestMatch.jet.name);
+    if (bestMatch.emptyLegInfo) {
+      console.log('🔥 Empty Leg Info:', bestMatch.emptyLegInfo);
+    }
+
+    const response = {
+      ...bestMatch,
+      fromIATA: startAirport.iata,
+      toIATA: destAirport.iata,
+      fromLocation: startAirport.city,
+      toLocation: destAirport.city
+    };
+
+    return new Response(JSON.stringify(response), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler';
+    const errorStack = error instanceof Error ? error.stack : 'Kein Stack';
+
+    console.error('❌ FEHLER in Edge Function (AI Jet Match V2):', errorMessage);
+    console.error('📍 Stack:', errorStack);
+
+    return new Response(
+      JSON.stringify({
+        error: errorMessage,
+        type: (error as any)?.constructor?.name || 'Unknown',
+        timestamp: new Date().toISOString()
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400
+      }
+    );
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ============================================
-   PWA & MOBILE OPTIMIZATION
-============================================ */
-input,
-select,
-textarea,
-button {
-  font-size: 16px !important;
-}
-
-/* ============================================
-   RESPONSIVE
-============================================ */
-@media (max-width: 1200px) {
-  .how-it-works-section .features-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 30px;
-  }
-  
-  .how-it-works-section .feature-card {
-    height: 580px; /* Kleiner auf Tablet */
-  }
-}
-
-@media (max-width: 1024px) {
-  .step-arrow {
-    display: none;
-  }
-}
-
-@media (max-width: 768px) {
-  .nav-menu {
-    gap: 20px;
-  }
-
-  .nav-link {
-    font-size: 15px;
-  }
-
-  .btn-nav {
-    padding: 10px 20px;
-    font-size: 14px;
-  }
-
-  .hero {
-    padding: 100px 20px 40px;
-  }
-
-  .hero-logo-color {
-    width: 280px;
-    margin-bottom: 35px;
-  }
-
-  .hero h1 {
-    font-size: 42px;
-    margin-bottom: 20px;
-    letter-spacing: -1px;
-  }
-
-  .hero-subtitle {
-    font-size: 18px;
-    margin-bottom: 40px;
-  }
-
-  .hero-cta {
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 60px;
-    gap: 15px;
-  }
-
-  .btn-primary,
-  .btn-secondary {
-    width: 100%;
-    max-width: 320px;
-    text-align: center;
-    padding: 18px 40px;
-    font-size: 17px;
-  }
-
-  .hero-stats {
-    flex-direction: column;
-    gap: 40px;
-  }
-
-  .stat-number {
-    font-size: 48px;
-  }
-
-  .stat-label {
-    font-size: 13px;
-  }
-
-  .features-section {
-    padding: 80px 20px;
-  }
-
-  .features-header h2 {
-    font-size: 36px;
-  }
-
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-
-  /* How It Works Mobile */
-  .how-it-works-section {
-    padding: 60px 20px;
-  }
-
-  .how-it-works-section .features-header h2 {
-    font-size: 2rem;
-  }
-
-  .how-it-works-section .features-grid {
-    grid-template-columns: 1fr;
-    gap: 30px;
-  }
-
-  .how-it-works-section .feature-card {
-    height: auto;
-    min-height: 480px;
-  }
-
-  .how-it-works-section .feature-image {
-    height: 240px; /* Smaller on mobile */
-  }
-
-  .how-it-works-section .feature-content {
-    padding: 25px 20px;
-  }
-
-  .how-it-works-section .feature-content h3 {
-    font-size: 1.3rem;
-  }
-
-  .how-it-works-section .feature-content p {
-    font-size: 0.95rem;
-  }
-
-  .step-number-badge {
-    width: 40px;
-    height: 40px;
-    font-size: 1.2rem;
-    top: 15px;
-    right: 15px;
-  }
-
-  .step-features-list {
-    gap: 8px;
-  }
-
-  .step-features-list span {
-    font-size: 0.85rem;
-    padding: 6px 12px;
-  }
-
-  .how-cta-dual {
-    grid-template-columns: 1fr;
-    gap: 40px;
-    padding: 40px 20px;
-    margin-top: 60px;
-  }
-
-  .cta-divider {
-    display: none;
-  }
-
-  .cta-column h3 {
-    font-size: 1.5rem;
-  }
-
-  .btn-primary-large {
-    padding: 18px 45px;
-    font-size: 18px;
-  }
-
-  .footer-content {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .footer-links {
-    flex-direction: column;
-    gap: 15px;
-  }
-
-  /* Touch-friendly tap targets */
-  button,
-  a,
-  .btn-primary,
-  .btn-secondary,
-  .btn-nav,
-  .btn-primary-large,
-  .btn-secondary-large {
-    min-height: 44px;
-    min-width: 44px;
-    padding: 14px 28px;
-  }
-
-  body {
-    overflow-x: hidden;
-  }
-
-  html {
-    scroll-behavior: smooth;
-  }
-
-  section {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .nav-menu {
-    gap: 15px;
-  }
-
-  .nav-link {
-    font-size: 14px;
-  }
-
-  .btn-nav {
-    padding: 10px 18px;
-    font-size: 13px;
-  }
-
-  .hero h1 {
-    font-size: 36px;
-  }
-
-  .hero-subtitle {
-    font-size: 16px;
-  }
-
-  .stat-number {
-    font-size: 42px;
-  }
-
-  .how-it-works-section .feature-image {
-    height: 220px; /* Kleiner auf sehr kleinen Screens */
-  }
-
-  .how-it-works-section .feature-card {
-    min-height: 420px;
-  }
-}
-
-@media (max-width: 375px) {
-  .hero h1 {
-    font-size: 32px;
-  }
-
-  .hero-subtitle {
-    font-size: 16px;
-  }
-
-  .nav-menu {
-    gap: 10px;
-  }
-
-  .btn-nav {
-    padding: 10px 16px;
-    font-size: 14px;
-  }
-}
-
-/* PWA specific */
-@media all and (display-mode: standalone) {
-  body {
-    padding-top: 0;
-  }
-}
+});
