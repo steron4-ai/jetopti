@@ -9,6 +9,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 // ------------------------------------------------------------------
 const SUPABASE_URL = Deno.env.get('PROJECT_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!;
+
 // ------------------------------------------------------------------
 // Helper
 // ------------------------------------------------------------------
@@ -333,6 +334,48 @@ Deno.serve(async (req) => {
       toNumber(base.lon),
       toNumber(start.lat),
       toNumber(start.lon),
+    );
+  }
+
+  // 🚫 Reichweiten-Check (nur Hauptstrecke – Ferry fliegt Operator)
+  if (jet.range !== null && jet.range > 0) {
+    if (mainDistanceKm > jet.range) {
+      return json(
+        {
+          error: `Dieser Jet kann diese Strecke nicht fliegen (Reichweite ${jet.range} km, Strecke ${mainDistanceKm.toFixed(
+            0,
+          )} km).`,
+          code: 'OUT_OF_RANGE',
+        },
+        400,
+      );
+    }
+  }
+
+  // ⏱ Lead-Time-Check (inkl. Ferry-Zeit)
+  const departure = new Date(dateTime);
+  const now = new Date();
+
+  const hoursUntilFlight =
+    (departure.getTime() - now.getTime()) / 3600000;
+
+  // Realistische Ferry-Geschwindigkeit ~800 km/h
+  const ferryHours = ferryDistanceKm > 0 ? ferryDistanceKm / 800 : 0;
+
+  const jetLead = jet.lead_time_hours ?? 4;
+  const requiredLeadTime = jetLead + ferryHours;
+
+  if (hoursUntilFlight < requiredLeadTime) {
+    return json(
+      {
+        error: `Dieser Jet benötigt mindestens ${requiredLeadTime.toFixed(
+          1,
+        )} Stunden Vorlaufzeit (inkl. Positionierungsflug). Bitte Abflugzeit anpassen.`,
+        code: 'LEAD_TIME_TOO_SHORT',
+        hoursUntilFlight,
+        requiredLeadTime,
+      },
+      400,
     );
   }
 
