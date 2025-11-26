@@ -1,16 +1,25 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    host: true,
+  },
   build: {
-    // NUR Cache Busting - das WICHTIGSTE!
+    outDir: 'dist',
+    sourcemap: false,
+    // Wir lassen Vite die Chunks automatisch verwalten - das ist stabiler!
+    chunkSizeWarningLimit: 1600, 
     rollupOptions: {
       output: {
-        // Dateinamen mit Hash für automatisches Cache Busting
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        manualChunks(id) {
+          // Alle Node-Modules (React, etc.) in eine separate Vendor-Datei packen
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        }
       }
     }
   }
