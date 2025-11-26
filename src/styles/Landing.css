@@ -427,7 +427,7 @@ body {
   gap: 40px;
 }
 
-/* Step Cards - TALLER for square images! */
+/* Step Cards - TALLER for 350px images! */
 .how-it-works-section .feature-card {
   position: relative;
   background: rgba(255, 255, 255, 0.05);
@@ -438,7 +438,7 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: 620px; /* Höher für 320px Bild */
+  height: 650px; /* Höher für 350px Bild */
 }
 
 .how-it-works-section .feature-card:hover {
@@ -466,22 +466,23 @@ body {
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5);
 }
 
-/* Image Container - TALLER for square images! */
+/* Image Container - TALLER to show cloud and more content! */
 .how-it-works-section .feature-image {
   width: 100%;
-  height: 320px; /* HÖHER für 1:1 Bilder! */
+  height: 350px; /* HÖHER - zeigt mehr oben/unten! */
   overflow: hidden;
   position: relative;
-  background: #ffffff;
+  background: #f8f9fa;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
 }
 
 .how-it-works-section .feature-image img {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* CONTAIN für komplette quadratische Bilder! */
+  object-fit: cover;
   object-position: center;
   display: block;
 }
@@ -813,7 +814,7 @@ button {
   }
 
   .how-it-works-section .feature-image {
-    height: 260px; /* Höher auf Mobile für 1:1 Bilder */
+    height: 280px; /* Höher auf Mobile */
   }
 
   .how-it-works-section .feature-content {
