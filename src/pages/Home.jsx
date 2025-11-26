@@ -1013,46 +1013,79 @@ const resolveAirport = (input) => {
   // Handler
   // --------------------------------------------------
     // Preis vom Backend holen (Pricing Engine V2)
-  const fetchDirectPrice = async (route, currentBooking) => {
-    if (!route || !currentBooking) return null;
+// Preis vom Backend holen (Pricing Engine V2)
+const fetchDirectPrice = async (route, currentBooking) => {
+  if (!route || !currentBooking) return null;
 
-    try {
-      setDirectPriceLoading(true);
-      setDirectPriceError(null);
+  // 🚫 Reichweiten-Check VOR dem Edge-Call
+  const jetRangeKm = currentBooking.range;
+  const distanceKm = route.distanceKm;
 
-      const { data, error } = await supabase.functions.invoke(
-        "direct-price-quote",
-        {
-          body: {
-            jetId: currentBooking.id,
-            fromIATA: route.start.iata,
-            toIATA: route.dest.iata,
-            passengers: parseInt(formData.passengers, 10) || 1,
-            dateTime: formData.dateTime,
-            roundtrip: formData.roundtrip,
-          },
-        }
-      );
+  if (jetRangeKm && jetRangeKm > 0 && distanceKm > jetRangeKm) {
+    const msg = `Dieser Jet kann die Strecke nicht ohne Tankstopp fliegen (Reichweite ca. ${Math.round(
+      jetRangeKm
+    ).toLocaleString("de-DE")} km, Strecke ca. ${Math.round(
+      distanceKm
+    ).toLocaleString("de-DE")} km). Bitte wählen Sie einen Jet mit größerer Reichweite.`;
 
-      if (error) throw error;
+    setDirectPrice(null);
+    setDirectPriceError(msg);
+    showToast(msg, "error"); // 🔔 Toast oben rechts
 
-      if (!data || typeof data.price !== "number") {
-        throw new Error("Preis konnte nicht berechnet werden.");
+    return null; // ➜ Edge Function wird gar nicht erst aufgerufen
+  }
+
+  try {
+    setDirectPriceLoading(true);
+    setDirectPriceError(null);
+
+    const { data, error } = await supabase.functions.invoke(
+      "direct-price-quote",
+      {
+        body: {
+          jetId: currentBooking.id,
+          fromIATA: route.start.iata,
+          toIATA: route.dest.iata,
+          passengers: parseInt(formData.passengers, 10) || 1,
+          dateTime: formData.dateTime,
+          roundtrip: formData.roundtrip,
+        },
       }
+    );
 
-      setDirectPrice(data.price);
-      return data.price;
-    } catch (err) {
-      console.error("Fehler beim Laden des Direktpreises:", err);
+    // 👇 Kein hässliches "non-2xx status code" mehr,
+    // sondern eine saubere Fehlermeldung
+    if (error) {
+      console.error("Fehler beim Laden des Direktpreises (Edge):", error, data);
+      const backendMsg = data && data.error;
+      const msg =
+        backendMsg ||
+        "Fehler bei der Preiskalkulation. Bitte versuchen Sie es später erneut.";
+
       setDirectPrice(null);
-      setDirectPriceError(
-        err.message || "Preis konnte nicht berechnet werden."
-      );
+      setDirectPriceError(msg);
+      showToast(msg, "error");
       return null;
-    } finally {
-      setDirectPriceLoading(false);
     }
-  };
+
+    if (!data || typeof data.price !== "number") {
+      throw new Error("Preis konnte nicht berechnet werden.");
+    }
+
+    setDirectPrice(data.price);
+    return data.price;
+  } catch (err) {
+    console.error("Fehler beim Laden des Direktpreises:", err);
+    const msg = err.message || "Preis konnte nicht berechnet werden.";
+    setDirectPrice(null);
+    setDirectPriceError(msg);
+    showToast(msg, "error");
+    return null;
+  } finally {
+    setDirectPriceLoading(false);
+  }
+};
+
 
   const handleSelectAirport = (field, airport) => {
     // Wir schreiben nur den IATA-Code ins Feld (z.B. "MUC", "LEJ")
