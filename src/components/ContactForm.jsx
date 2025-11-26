@@ -32,7 +32,7 @@ export default function ContactForm() {
         {
           from_name: formData.name,
           from_email: formData.email,
-          company: formData.company || 'Nicht angegeben',
+          company: formData.company || 'Not provided',
           message: formData.message,
           to_email: 'info@jetopti.com'
         },
@@ -42,13 +42,13 @@ export default function ContactForm() {
       setStatus('success');
       setFormData({ name: '', email: '', company: '', message: '' });
       
-      // Success message nach 5 Sekunden ausblenden
+      // Hide success message after 5 seconds
       setTimeout(() => setStatus(''), 5000);
       
     } catch (error) {
       console.error('Email send error:', error);
       setStatus('error');
-      setErrorMessage('Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es erneut.');
+      setErrorMessage('Message could not be sent. Please try again.');
     }
   };
 
@@ -56,9 +56,9 @@ export default function ContactForm() {
     <section className="contact-section" id="contact">
       <div className="contact-container">
         <div className="contact-header">
-          <h2 className="contact-title">Kontaktieren Sie uns</h2>
+          <h2 className="contact-title">Get in Touch</h2>
           <p className="contact-subtitle">
-            Haben Sie Fragen? Wir sind für Sie da und antworten innerhalb von 24 Stunden.
+            Have questions? We're here to help and respond within 24 hours.
           </p>
         </div>
 
@@ -73,13 +73,13 @@ export default function ContactForm() {
                 value={formData.name}
                 onChange={handleChange}
                 required
-                placeholder="Ihr Name"
+                placeholder="Your name"
                 disabled={status === 'sending'}
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="email">E-Mail *</label>
+              <label htmlFor="email">Email *</label>
               <input
                 type="email"
                 id="email"
@@ -87,27 +87,27 @@ export default function ContactForm() {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                placeholder="ihre@email.com"
+                placeholder="your@email.com"
                 disabled={status === 'sending'}
               />
             </div>
           </div>
 
           <div className="form-group">
-            <label htmlFor="company">Firma (optional)</label>
+            <label htmlFor="company">Company (optional)</label>
             <input
               type="text"
               id="company"
               name="company"
               value={formData.company}
               onChange={handleChange}
-              placeholder="Ihr Unternehmen"
+              placeholder="Your company"
               disabled={status === 'sending'}
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="message">Nachricht *</label>
+            <label htmlFor="message">Message *</label>
             <textarea
               id="message"
               name="message"
@@ -115,7 +115,7 @@ export default function ContactForm() {
               onChange={handleChange}
               required
               rows="5"
-              placeholder="Wie können wir Ihnen helfen?"
+              placeholder="How can we help you?"
               disabled={status === 'sending'}
             />
           </div>
@@ -128,11 +128,11 @@ export default function ContactForm() {
             {status === 'sending' ? (
               <>
                 <span className="spinner"></span>
-                Wird gesendet...
+                Sending...
               </>
             ) : (
               <>
-                Nachricht senden
+                Send Message
                 <span className="btn-arrow">→</span>
               </>
             )}
@@ -141,7 +141,7 @@ export default function ContactForm() {
           {status === 'success' && (
             <div className="status-message success">
               <span className="status-icon">✓</span>
-              Vielen Dank! Ihre Nachricht wurde erfolgreich gesendet. Wir melden uns in Kürze bei Ihnen.
+              Thank you! Your message was sent successfully. We'll get back to you shortly.
             </div>
           )}
 
@@ -160,7 +160,7 @@ export default function ContactForm() {
           </div>
           <div className="info-item">
             <span className="info-icon">⏱️</span>
-            <span>Antwort innerhalb von 24 Stunden</span>
+            <span>Response within 24 hours</span>
           </div>
         </div>
       </div>

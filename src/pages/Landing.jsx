@@ -19,8 +19,25 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* HERO SECTION */}
+      {/* HERO SECTION WITH VIDEO BACKGROUND */}
       <section className="hero">
+        {/* Video Background */}
+        <div className="hero-video-container">
+          <video 
+            autoPlay 
+            loop 
+            muted 
+            playsInline
+            className="hero-video"
+          >
+            <source src="/videos/hero-video.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+          {/* Dark overlay for text readability */}
+          <div className="hero-video-overlay"></div>
+        </div>
+
+        {/* Hero Content */}
         <div className="hero-content">
           <img 
             src="/images/logo.png" 
@@ -143,7 +160,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* HOW IT WORKS SECTION - NEU MIT FEATURE CARD STYLE! */}
+      {/* HOW IT WORKS SECTION */}
       <section className="how-it-works-section">
         <div className="features-container">
           

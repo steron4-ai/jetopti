@@ -103,41 +103,61 @@ body {
 }
 
 /* ============================================
-   HERO SECTION
+   HERO SECTION - VIDEO BACKGROUND
 ============================================ */
 .hero {
-  min-height: auto;
+  min-height: 100vh;
   padding: 120px 20px 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   position: relative;
   overflow: hidden;
 }
 
-.hero::before {
-  content: '';
+/* Video Background Container */
+.hero-video-container {
   position: absolute;
-  width: 500px;
-  height: 500px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  top: -200px;
-  right: -200px;
-  animation: float 20s infinite ease-in-out;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
 }
 
-.hero::after {
-  content: '';
+/* Video Element */
+.hero-video {
   position: absolute;
-  width: 400px;
-  height: 400px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  bottom: -150px;
-  left: -150px;
-  animation: float 25s infinite ease-in-out reverse;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  width: 75%; /* NOCH WEITER raus - war 85% */
+  height: 75%; /* NOCH WEITER raus - war 85% */
+  transform: translate(-50%, -50%) scale(1);
+  object-fit: cover;
+}
+
+/* Luxurious overlay for text readability */
+.hero-video-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.75) 0%,
+    rgba(118, 75, 162, 0.75) 100%
+  );
+  /* Purple tint for luxury feel */
+}
+
+/* Remove old floating circles */
+.hero::before,
+.hero::after {
+  display: none;
 }
 
 @keyframes float {
@@ -153,14 +173,14 @@ body {
   max-width: 900px;
   text-align: center;
   position: relative;
-  z-index: 1;
+  z-index: 10; /* Above video and overlay */
   color: white;
 }
 
 .hero-logo-color {
-  width: 500px; /* GRÖßER - war 350px */
+  width: 600px; /* NOCH GRÖßER - war 500px */
   max-width: 90%;
-  margin-bottom: 40px;
+  margin-bottom: 20px; /* HÖHER - war 40px */
   animation: fadeInDown 1s ease;
   filter: none !important;
   -webkit-filter: none !important;
@@ -237,12 +257,7 @@ body {
 }
 
 .hero-stats {
-  display: flex;
-  gap: 60px;
-  justify-content: center;
-  flex-wrap: wrap;
-  animation: fadeInUp 1s ease 0.8s both;
-  margin-bottom: 0;
+  display: none !important; /* Stats komplett verstecken */
 }
 
 .stat {
