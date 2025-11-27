@@ -250,6 +250,118 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ========================================
+          SCREENSHOT SHOWCASE SECTION - NEU!
+      ======================================== */}
+      <section className="showcase-section">
+        <div className="showcase-container">
+          
+          <div className="showcase-header">
+            <h2>See JetOpti in Action</h2>
+            <p>Real screenshots from our platform - built for speed and simplicity</p>
+          </div>
+
+          <div className="showcase-grid">
+            
+            {/* Screenshot 1 - Interactive Map */}
+            <div className="showcase-item showcase-large">
+              <div className="screenshot-container">
+                <img 
+                  src="/images/screenshots/map-view.png" 
+                  alt="Interactive Jet Map" 
+                  className="screenshot-img"
+                />
+                <div className="screenshot-badge">Live Demo</div>
+              </div>
+              <div className="screenshot-content">
+                <h3>🗺️ Interactive Map</h3>
+                <p>Real-time jet tracking across Europe and beyond. Filter by type, seats, and range. AI-powered matching finds your perfect jet instantly.</p>
+                <div className="screenshot-features">
+                  <span>✓ Live tracking</span>
+                  <span>✓ Smart filters</span>
+                  <span>✓ Hot Deals</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Screenshot 2 - Charter Dashboard */}
+            <div className="showcase-item">
+              <div className="screenshot-container">
+                <img 
+                  src="/images/screenshots/dashboard.png" 
+                  alt="Charter Company Dashboard" 
+                  className="screenshot-img"
+                />
+                <div className="screenshot-badge">For Charter Companies</div>
+              </div>
+              <div className="screenshot-content">
+                <h3>📊 Smart Dashboard</h3>
+                <p>Manage your entire fleet from one place. Track bookings, revenue, and Hot Deals in real-time.</p>
+                <div className="screenshot-features">
+                  <span>✓ Real-time stats</span>
+                  <span>✓ Fleet management</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Screenshot 3 - Jet Details */}
+            <div className="showcase-item">
+              <div className="screenshot-container">
+                <img 
+                  src="/images/screenshots/jet-details.png" 
+                  alt="Jet Details View" 
+                  className="screenshot-img"
+                />
+                <div className="screenshot-badge">Customer View</div>
+              </div>
+              <div className="screenshot-content">
+                <h3>✈️ Detailed Jet Info</h3>
+                <p>Every detail at a glance. Seats, range, Hot Deals discount - everything transparent.</p>
+                <div className="screenshot-features">
+                  <span>✓ Full specs</span>
+                  <span>✓ Instant booking</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Screenshot 4 - AI Matching */}
+            <div className="showcase-item">
+              <div className="screenshot-container">
+                <img 
+                  src="/images/screenshots/ai-match.png" 
+                  alt="AI Matching Result" 
+                  className="screenshot-img"
+                />
+                <div className="screenshot-badge">AI Powered</div>
+              </div>
+              <div className="screenshot-content">
+                <h3>🎯 Perfect Match</h3>
+                <p>AI analyzes distance, route, price, and availability to find your ideal jet in seconds.</p>
+                <div className="screenshot-features">
+                  <span>✓ Smart algorithm</span>
+                  <span>✓ Best price</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* CTA */}
+          <div className="showcase-cta">
+            <h3>Ready to experience it yourself?</h3>
+            <div className="showcase-cta-buttons">
+              <Link to="/map" className="btn-showcase-primary">
+                Explore Live Map
+              </Link>
+              <Link to="/dashboard" className="btn-showcase-secondary">
+                Try Dashboard Demo
+              </Link>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       {/* CONTACT FORM */}
       <ContactForm />
 
