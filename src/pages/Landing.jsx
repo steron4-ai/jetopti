@@ -344,6 +344,27 @@ export default function Landing() {
               </div>
             </div>
 
+            {/* Screenshot 5 - Hot Deals */}
+            <div className="showcase-item">
+              <div className="screenshot-container">
+                <img 
+                  src="/images/screenshots/hotdeal.png" 
+                  alt="Hot Deals Feature" 
+                  className="screenshot-img"
+                />
+                <div className="screenshot-badge">Save Money</div>
+              </div>
+              <div className="screenshot-content">
+                <h3>🔥 Hot Deals</h3>
+                <p>Exclusive discounts on empty leg flights. Save up to 75% on premium jets flying back to their home base.</p>
+                <div className="screenshot-features">
+                  <span>✓ Up to 75% off</span>
+                  <span>✓ Limited time</span>
+                  <span>✓ Best value</span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           {/* CTA */}

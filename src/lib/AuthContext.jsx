@@ -1,3 +1,4 @@
+// src/lib/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 
@@ -21,7 +22,9 @@ export const AuthProvider = ({ children }) => {
     checkUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         loadProfile(session.user.id);
@@ -37,7 +40,9 @@ export const AuthProvider = ({ children }) => {
   // Check if user is logged in
   const checkUser = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setUser(user);
       if (user) {
         await loadProfile(user.id);
@@ -62,23 +67,37 @@ export const AuthProvider = ({ children }) => {
       setProfile(data);
     } catch (error) {
       console.error('Error loading profile:', error);
+      setProfile(null); // wichtig, damit keine alten Daten hängen bleiben
     }
   };
 
   // Sign up new user
   const signUp = async (email, password, userData = {}) => {
     try {
+      // Rolle normalisieren
+      const role =
+        userData.role === 'charter_company' ? 'charter_company' : 'customer';
+
+      // Charterfirma muss erst freigeschaltet werden, Kunde ist direkt aktiv
+      const isApproved = role === 'charter_company' ? false : true;
+
+      // 1) Supabase Auth: User anlegen + Metadaten
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: userData
-        }
+          emailRedirectTo: `${window.location.origin}`,
+          data: {
+            ...userData,
+            role,
+            is_approved: isApproved,
+          },
+        },
       });
 
       if (error) throw error;
 
-      // Create profile in database
+      // 2) Profil in unserer "profiles"-Tabelle anlegen
       if (data.user) {
         const { error: profileError } = await supabase
           .from('profiles')
@@ -86,10 +105,13 @@ export const AuthProvider = ({ children }) => {
             {
               id: data.user.id,
               email: data.user.email,
-              role: userData.role || 'customer',
+              role,
               company_name: userData.company_name || null,
-              phone: userData.phone || null
-            }
+              phone: userData.phone || null,
+              is_approved: isApproved,
+              first_name: userData.first_name || null,
+              last_name: userData.last_name || null,
+            },
           ]);
 
         if (profileError) throw profileError;
@@ -107,7 +129,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
 
       if (error) throw error;
@@ -162,7 +184,12 @@ export const AuthProvider = ({ children }) => {
     signOut,
     updateProfile,
     isAuthenticated: !!user,
+
+    // praktische Flags für UI
     isCharterCompany: profile?.role === 'charter_company',
+    isApprovedCompany:
+      profile?.role === 'charter_company' && profile?.is_approved === true,
+    isCustomer: profile?.role === 'customer',
     isAdmin: profile?.role === 'admin',
   };
 

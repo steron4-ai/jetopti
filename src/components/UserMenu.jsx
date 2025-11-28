@@ -2,13 +2,22 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import './UserMenu.css'; 
+import './UserMenu.css';
 
 export default function UserMenu() {
-  const { user, profile, signOut } = useAuth();
+  const {
+    user,
+    profile,
+    signOut,
+    isCharterCompany,
+    isApprovedCompany,
+    isCustomer,
+    isAdmin,
+  } = useAuth();
+
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -17,18 +26,21 @@ export default function UserMenu() {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () =>
+      document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleLogout = async () => {
     await signOut();
     setIsOpen(false);
-    navigate('/'); 
+    navigate('/');
   };
 
   const getRoleName = () => {
-    if (profile?.role === 'charter_company') return 'Charterfirma';
-    if (profile?.role === 'admin') return 'Administrator';
+    if (isCharterCompany && isApprovedCompany) return 'Charterfirma';
+    if (isCharterCompany && !isApprovedCompany)
+      return 'Charterfirma (in Prüfung)';
+    if (isAdmin) return 'Administrator';
     return 'Kunde';
   };
 
@@ -43,7 +55,11 @@ export default function UserMenu() {
         className="user-menu-trigger user-menu-button"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="company-full-name">{profile?.company_name || user?.email?.split('@')[0] || 'Menü'}</span>
+        <span className="company-full-name">
+          {profile?.company_name ||
+            user?.email?.split('@')[0] ||
+            'Menü'}
+        </span>
         <span className="dropdown-arrow user-menu-caret">▼</span>
       </button>
 
@@ -62,41 +78,67 @@ export default function UserMenu() {
           <div className="user-menu-divider" />
 
           <div className="user-menu-items">
-            {/* Dashboard-Link nur für Charterfirmen */}
-            {profile?.role === 'charter_company' && (
-              <button className="user-menu-item" onClick={() => handleNavigate('/dashboard')}>
+            {/* Dashboard nur für freigegebene Charterfirmen */}
+            {isCharterCompany && isApprovedCompany && (
+              <button
+                className="user-menu-item"
+                onClick={() => handleNavigate('/dashboard')}
+              >
                 <span className="menu-icon">📊</span>
                 Dashboard
               </button>
             )}
 
-            {/* Admin-Link (falls benötigt) */}
-            {profile?.role === 'admin' && (
-               <button className="user-menu-item" onClick={() => handleNavigate('/admin')}>
-                 <span className="menu-icon">⚙️</span>
-                 Admin Panel
-               </button>
+            {/* Hinweis für noch nicht freigeschaltete Firmen */}
+            {isCharterCompany && !isApprovedCompany && (
+              <div
+                className="user-menu-item"
+                style={{ opacity: 0.9 }}
+              >
+                <span className="menu-icon">⏳</span>
+                Konto wird geprüft – Dashboard nach Freigabe verfügbar
+              </div>
             )}
 
-            {/* --- NEU: Buchungen-Link (Nur für Kunden) --- */}
-            {profile?.role === 'customer' && (
-              <button className="user-menu-item" onClick={() => handleNavigate('/my-bookings')}>
+            {/* Admin-Link (falls benötigt) */}
+            {isAdmin && (
+              <button
+                className="user-menu-item"
+                onClick={() => handleNavigate('/admin')}
+              >
+                <span className="menu-icon">⚙️</span>
+                Admin Panel
+              </button>
+            )}
+
+            {/* Meine Buchungen nur für Kunden */}
+            {isCustomer && (
+              <button
+                className="user-menu-item"
+                onClick={() => handleNavigate('/my-bookings')}
+              >
                 <span className="menu-icon">✈️</span>
                 Meine Buchungen
               </button>
             )}
 
             {/* Profil-Link */}
-            <button className="user-menu-item" onClick={() => handleNavigate('/profile')}>
+            <button
+              className="user-menu-item"
+              onClick={() => handleNavigate('/profile')}
+            >
               <span className="menu-icon">👤</span>
               Profil bearbeiten
             </button>
 
-             {/* Einstellungen-Link */}
-             <button className="user-menu-item" onClick={() => handleNavigate('/settings')}>
-               <span className="menu-icon">⚙️</span>
-               Einstellungen
-             </button>
+            {/* Einstellungen-Link */}
+            <button
+              className="user-menu-item"
+              onClick={() => handleNavigate('/settings')}
+            >
+              <span className="menu-icon">⚙️</span>
+              Einstellungen
+            </button>
           </div>
 
           <div className="user-menu-divider" />

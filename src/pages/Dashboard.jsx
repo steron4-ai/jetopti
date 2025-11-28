@@ -87,6 +87,50 @@ function JetForm({ onSubmit, onCancel, initialData = null, airports }) {
     empty_leg_discount: initialData?.empty_leg_discount || 50,
   });
 
+      const [existingGallery, setExistingGallery] = useState([]);
+  const [removedGallery, setRemovedGallery] = useState([]);
+
+  // 🎯 Lade Galerie-Bilder aus initialData (egal ob Array oder JSON-String)
+  useEffect(() => {
+    if (!initialData) return;
+
+    let urls = [];
+
+    if (Array.isArray(initialData.gallery_urls)) {
+      urls = initialData.gallery_urls;
+    } else if (typeof initialData.gallery_urls === 'string') {
+      try {
+        const parsed = JSON.parse(initialData.gallery_urls);
+        if (Array.isArray(parsed)) {
+          urls = parsed;
+        }
+      } catch (e) {
+        console.warn(
+          'gallery_urls ist kein gültiges JSON:',
+          initialData.gallery_urls
+        );
+      }
+    }
+
+    // Nur echte Strings übernehmen
+    setExistingGallery(urls.filter(Boolean));
+    console.log('🎨 JetForm – existingGallery geladen:', urls);
+  }, [initialData]);
+
+
+  const handleSetCoverFromGallery = (url) => {
+    setFormData((prev) => ({
+      ...prev,
+      image_url: url,
+    }));
+  };
+
+  const handleRemoveFromGallery = (url) => {
+    setExistingGallery((prev) => prev.filter((u) => u !== url));
+    setRemovedGallery((prev) => [...prev, url]);
+  };
+
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const safeAirports = airports || [];
 
@@ -181,29 +225,34 @@ function JetForm({ onSubmit, onCancel, initialData = null, airports }) {
 
     setIsSubmitting(true);
     try {
-      const submitData = {
-        name: formData.name,
-        icao24: formData.icao24.toUpperCase(),
-        type: formData.type,
-        seats: seatsValue,
-        range: rangeValue,
-        current_iata: currentAirport.iata,
-        current_lat: currentAirport.lat,
-        current_lng: currentAirport.lon,
-        image_url: formData.image_url,
-        image_file: formData.image_file,
+          const submitData = {
+      name: formData.name,
+      icao24: formData.icao24.toUpperCase(),
+      type: formData.type,
+      seats: seatsValue,
+      range: rangeValue,
+      current_iata: currentAirport.iata,
+      current_lat: currentAirport.lat,
+      current_lng: currentAirport.lon,
+      image_url: formData.image_url,
+      image_file: formData.image_file,
 
-        lead_time_hours: leadTimeValue,
-        price_per_hour: pricePerHourValue,
-        min_booking_price: minPriceValue,
-        year_built: yearValue,
-        home_base_iata: homeAirport ? homeAirport.iata : null,
+      lead_time_hours: leadTimeValue,
+      price_per_hour: pricePerHourValue,
+      min_booking_price: minPriceValue,
+      year_built: yearValue,
+      home_base_iata: homeAirport ? homeAirport.iata : null,
 
-        gallery_files: formData.gallery_files,
+      gallery_files: formData.gallery_files,
 
-        allow_empty_legs: formData.allow_empty_legs,
-        empty_leg_discount: parseInt(formData.empty_leg_discount, 10),
-      };
+      // 👇 NEU: bestehende/gelöschte Galerie-Bilder mitgeben
+      existing_gallery_urls: existingGallery,
+      removed_gallery_urls: removedGallery,
+
+      allow_empty_legs: formData.allow_empty_legs,
+      empty_leg_discount: parseInt(formData.empty_leg_discount, 10),
+    };
+
 
       await onSubmit(submitData, initialData?.id);
     } catch (error) {
@@ -259,6 +308,85 @@ function JetForm({ onSubmit, onCancel, initialData = null, airports }) {
         </a>
         .
       </small>
+            {existingGallery.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <p
+            style={{
+              fontWeight: 600,
+              marginBottom: '8px',
+              color: '#111827',
+            }}
+          >
+            Bestehende Galerie-Bilder
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '10px',
+            }}
+          >
+            {existingGallery.map((url) => (
+              <div
+                key={url}
+                style={{
+                  width: '120px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '6px',
+                  background: '#f9fafb',
+                }}
+              >
+                <img
+                  src={url}
+                  alt="Jet"
+                  style={{
+                    width: '100%',
+                    height: '70px',
+                    objectFit: 'cover',
+                    borderRadius: '6px',
+                    marginBottom: '4px',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleSetCoverFromGallery(url)}
+                  style={{
+                    width: '100%',
+                    fontSize: '11px',
+                    padding: '4px 6px',
+                    marginBottom: '4px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: '#e0f2fe',
+                    color: '#1d4ed8',
+                  }}
+                >
+                  Titelbild setzen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFromGallery(url)}
+                  style={{
+                    width: '100%',
+                    fontSize: '11px',
+                    padding: '4px 6px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: '#fee2e2',
+                    color: '#b91c1c',
+                  }}
+                >
+                  Entfernen
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       <label htmlFor="type">Jet-Typ *</label>
       <select
@@ -638,6 +766,358 @@ function TabNav({ tabs, activeTab, onTabChange }) {
     </div>
   );
 }
+// --- NEU: Preis-Simulator für Charterfirmen ----------------------
+function PriceSimulator({ airports }) {
+  const [form, setForm] = useState({
+    jetType: 'Light Jet',
+    pricePerHour: 4500,
+    minPrice: 5000,
+    fromIATA: '',
+    toIATA: '',
+    passengers: 4,
+    dateTime: new Date().toISOString().slice(0, 16), // yyyy-MM-ddTHH:mm
+    roundtrip: false,
+  });
+
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const CRUISE_SPEED_BY_CLASS = {
+    'Very Light Jet': 620,
+    'Light Jet': 720,
+    'Super Light Jet': 760,
+    'Midsize Jet': 800,
+    'Super Midsize Jet': 830,
+    'Heavy Jet': 850,
+    'Ultra Long Range': 900,
+  };
+
+  const PREMIUM_AIRPORTS = new Set([
+    'LHR','LGW','LCY',
+    'CDG','NCE','LBG',
+    'FRA','MUC','ZRH','GVA','VIE',
+    'IBZ','OLB','PMI',
+    'JFK','EWR','LAX','SFO','LAS',
+    'DXB','DOH','HKG','SIN',
+  ]);
+
+  const handleChange = (e) => {
+    const { name, type, value, checked } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const findAirport = (iata) => {
+    if (!iata) return null;
+    const up = iata.trim().toUpperCase();
+    return (airports || []).find(
+      (a) => (a.iata || '').toUpperCase() === up
+    ) || null;
+  };
+
+  const distanceKm = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const calcBlockHours = (distKm, cruiseSpeed, minBlock) => {
+    if (!distKm || distKm <= 0) return 0;
+    const pure = distKm / cruiseSpeed;
+    return Math.max(pure + 0.4, minBlock); // +Taxi/Climb
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError(null);
+    setResult(null);
+    setLoading(true);
+
+    try {
+      const start = findAirport(form.fromIATA);
+      const dest = findAirport(form.toIATA);
+
+      if (!start || !dest) {
+        throw new Error('Start- oder Zielflughafen nicht gefunden (IATA z.B. LHR / DXB).');
+      }
+
+      const mainDistanceKm = distanceKm(
+        Number(start.lat),
+        Number(start.lon),
+        Number(dest.lat),
+        Number(dest.lon)
+      );
+
+      const cruiseSpeed =
+        CRUISE_SPEED_BY_CLASS[form.jetType] || 780;
+
+      const hourlyRate = Number(form.pricePerHour) || 0;
+      const minPrice = Number(form.minPrice) || 0;
+      const pax = Number(form.passengers) || 1;
+      const isRoundtrip = !!form.roundtrip;
+
+      // Blockzeiten
+      let blockMain = calcBlockHours(mainDistanceKm, cruiseSpeed, 1.0);
+      if (isRoundtrip) blockMain *= 1.8; // simple 80%-Aufschlag
+
+      const flightCost = blockMain * hourlyRate;
+
+      // Crew: 500 € je 4 Blockstunden
+      const crewCost = 500 * Math.max(1, Math.ceil(blockMain / 4));
+
+      // Landings: 400€ pro Leg
+      const legs = isRoundtrip ? 2 : 1;
+      const landingFees = 400 * legs;
+
+      // Pax-Fee ab 5 Pax
+      const passengerFees = pax > 4 ? (pax - 4) * 150 : 0;
+
+      let demandFactor = 1.0;
+      const reasons = [];
+
+      const dep = new Date(form.dateTime);
+      if (!isNaN(dep.getTime())) {
+        const dow = dep.getUTCDay();
+        const month = dep.getUTCMonth() + 1;
+
+        const isWeekend = dow === 5 || dow === 6 || dow === 0;
+        const isSummer = month === 7 || month === 8;
+        const isXmas = month === 12;
+
+        if (isWeekend) {
+          demandFactor += 0.1;
+          reasons.push('Weekend');
+        }
+        if (isSummer) {
+          demandFactor += 0.05;
+          reasons.push('Sommer');
+        }
+        if (isXmas) {
+          demandFactor += 0.1;
+          reasons.push('Weihnachten/Neujahr');
+        }
+      }
+
+      const fromUp = form.fromIATA.toUpperCase();
+      const toUp = form.toIATA.toUpperCase();
+      if (PREMIUM_AIRPORTS.has(fromUp) || PREMIUM_AIRPORTS.has(toUp)) {
+        demandFactor += 0.15;
+        reasons.push('Premium-Airport');
+      }
+
+      let base =
+        flightCost +
+        crewCost +
+        landingFees +
+        passengerFees;
+
+      base *= demandFactor;
+
+      const total = Math.max(base, minPrice);
+      const minApplied = total === minPrice ? minPrice : 0;
+
+      setResult({
+        distanceKm: mainDistanceKm,
+        blockHours: blockMain,
+        flightCost,
+        crewCost,
+        landingFees,
+        passengerFees,
+        demandFactor,
+        reasons,
+        minApplied,
+        total,
+      });
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Fehler bei der Simulation.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="price-simulator">
+      <h2>🧮 Preis-Simulator (nur Demo, keine Speicherung)</h2>
+      <p style={{ color: '#6b7280', marginBottom: '16px' }}>
+        Hier können Sie mit Jet-Typ, Stundenpreis und Route spielen.
+        Die Berechnung nutzt die gleiche Logik wie JetOpti (vereinfacht),
+        speichert aber nichts in Ihrer Flottenkonfiguration.
+      </p>
+
+      <form className="jet-form" onSubmit={handleSubmit}>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <label>Jet-Typ</label>
+            <select
+              name="jetType"
+              value={form.jetType}
+              onChange={handleChange}
+            >
+              <option>Very Light Jet</option>
+              <option>Light Jet</option>
+              <option>Super Light Jet</option>
+              <option>Midsize Jet</option>
+              <option>Super Midsize Jet</option>
+              <option>Heavy Jet</option>
+              <option>Ultra Long Range</option>
+            </select>
+          </div>
+
+          <div style={{ flex: 1, minWidth: '160px' }}>
+            <label>Stundenpreis (€)</label>
+            <input
+              type="number"
+              name="pricePerHour"
+              value={form.pricePerHour}
+              onChange={handleChange}
+              min="0"
+            />
+          </div>
+
+          <div style={{ flex: 1, minWidth: '160px' }}>
+            <label>Mindestpreis (€)</label>
+            <input
+              type="number"
+              name="minPrice"
+              value={form.minPrice}
+              onChange={handleChange}
+              min="0"
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '140px' }}>
+            <label>Start (IATA)</label>
+            <input
+              type="text"
+              name="fromIATA"
+              value={form.fromIATA}
+              onChange={handleChange}
+              placeholder="z.B. LHR"
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: '140px' }}>
+            <label>Ziel (IATA)</label>
+            <input
+              type="text"
+              name="toIATA"
+              value={form.toIATA}
+              onChange={handleChange}
+              placeholder="z.B. DXB"
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: '140px' }}>
+            <label>Passagiere</label>
+            <input
+              type="number"
+              name="passengers"
+              value={form.passengers}
+              onChange={handleChange}
+              min="1"
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '220px' }}>
+            <label>Abflug (Datum & Uhrzeit)</label>
+            <input
+              type="datetime-local"
+              name="dateTime"
+              value={form.dateTime}
+              onChange={handleChange}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '24px' }}>
+            <input
+              type="checkbox"
+              id="sim_roundtrip"
+              name="roundtrip"
+              checked={form.roundtrip}
+              onChange={handleChange}
+            />
+            <label htmlFor="sim_roundtrip">Hin- & Rückflug (~+80%)</label>
+          </div>
+        </div>
+
+        <div className="form-actions" style={{ marginTop: '20px' }}>
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? 'Berechne...' : 'Preis simulieren'}
+          </button>
+        </div>
+      </form>
+
+      {error && (
+        <div
+          style={{
+            marginTop: '16px',
+            padding: '12px',
+            borderRadius: '8px',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#b91c1c',
+          }}
+        >
+          ⚠️ {error}
+        </div>
+      )}
+
+      {result && !error && (
+        <div
+          style={{
+            marginTop: '20px',
+            padding: '16px',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            background: '#f9fafb',
+          }}
+        >
+          <h3 style={{ marginTop: 0 }}>Ergebnis</h3>
+          <p style={{ margin: '4px 0' }}>
+            Distanz: <strong>{result.distanceKm.toFixed(0)} km</strong> •
+            Blockzeit: <strong>{result.blockHours.toFixed(1)} h</strong>
+          </p>
+          <p style={{ margin: '4px 0' }}>
+            Flugkosten (Blockzeit × Stundenpreis):{' '}
+            <strong>€{Math.round(result.flightCost).toLocaleString()}</strong>
+          </p>
+          <p style={{ margin: '4px 0' }}>
+            Crewkosten: <strong>€{Math.round(result.crewCost).toLocaleString()}</strong> •
+            Landegebühren: <strong>€{Math.round(result.landingFees).toLocaleString()}</strong> •
+            Pax-Gebühren: <strong>€{Math.round(result.passengerFees).toLocaleString()}</strong>
+          </p>
+          <p style={{ margin: '4px 0' }}>
+            Nachfrage-Faktor:{' '}
+            <strong>
+              × {result.demandFactor.toFixed(2)}{' '}
+              {result.reasons.length > 0 && `(${result.reasons.join(', ')})`}
+            </strong>
+          </p>
+          {result.minApplied > 0 && (
+            <p style={{ margin: '4px 0', color: '#b45309' }}>
+              Mindestpreis griff: Jet hätte günstiger kalkuliert, aber Mindestpreis von{' '}
+              <strong>€{Math.round(result.minApplied).toLocaleString()}</strong> setzt die Untergrenze.
+            </p>
+          )}
+          <p style={{ marginTop: '8px', fontSize: '1.1rem' }}>
+            💰 <strong>Simulierter Gesamtpreis: €{Math.round(result.total).toLocaleString()}</strong>
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ===================================================================
 // HAUPTKOMPONENTE: DASHBOARD
@@ -655,6 +1135,95 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [airports, setAirports] = useState([]);
   const [toast, setToast] = useState(null);
+
+    // Wenn Charterfirma aber noch nicht freigegeben -> Blockscreen
+  if (profile?.role === 'charter_company' && profile?.is_approved === false) {
+    return (
+      <div className="dashboard">
+        <div className="dashboard-header">
+          <h1>Dashboard</h1>
+          <button
+            onClick={() => navigate('/')}
+            className="btn-secondary"
+          >
+            ← Zurück zur Karte
+          </button>
+        </div>
+
+        <div className="dashboard-content">
+          <div
+            style={{
+              maxWidth: '600px',
+              margin: '40px auto',
+              padding: '24px',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+              background: '#f9fafb',
+              textAlign: 'center',
+            }}
+          >
+            <h2 style={{ marginBottom: '12px' }}>Ihr Firmenkonto wird geprüft</h2>
+            <p style={{ color: '#4b5563', lineHeight: 1.6 }}>
+              Vielen Dank für Ihre Registrierung als Charterfirma.
+              <br />
+              Wir prüfen Ihre Angaben und schalten Ihr JetOpti-Dashboard
+              nach erfolgreicher Verifizierung frei.
+            </p>
+            <p style={{ marginTop: '16px', fontSize: '14px', color: '#6b7280' }}>
+              Bei Rückfragen erreichen Sie uns jederzeit über&nbsp;
+              <a href="mailto:support@jetopti.com">support@jetopti.com</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+    // ⛔ Falls Charterfirma noch nicht freigegeben ist: Blockscreen anzeigen
+  if (profile?.role === 'charter_company' && profile?.is_approved === false) {
+    return (
+      <div className="dashboard">
+        <div className="dashboard-header">
+          <h1>Dashboard</h1>
+          <button
+            onClick={() => navigate('/')}
+            className="btn-secondary"
+          >
+            ← Zurück zur Karte
+          </button>
+        </div>
+
+        <div className="dashboard-content">
+          <div
+            style={{
+              maxWidth: '600px',
+              margin: '40px auto',
+              padding: '24px',
+              borderRadius: '16px',
+              border: '1px solid #e5e7eb',
+              background: '#f9fafb',
+              textAlign: 'center',
+            }}
+          >
+            <h2 style={{ marginBottom: '12px' }}>Account in Prüfung</h2>
+            <p style={{ marginBottom: '8px', color: '#4b5563' }}>
+              Vielen Dank für Ihre Registrierung als Charterfirma.
+            </p>
+            <p style={{ marginBottom: '8px', color: '#6b7280' }}>
+              Ihr JetOpti-Business-Account wurde angelegt, ist aber noch nicht freigeschaltet.
+              Wir prüfen Ihre Angaben manuell und melden uns in Kürze per E-Mail.
+            </p>
+            <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: '16px' }}>
+              Sobald Ihr Account freigegeben ist, können Sie hier Jets anlegen
+              und Buchungen verwalten.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
   // --- EmailJS Konfiguration ---
   const emailServiceId = import.meta.env.VITE_EMAIL_SERVICE || 'service_cw6x40c';
@@ -859,11 +1428,27 @@ export default function Dashboard() {
   };
 
   // Jet bearbeiten
+    // Jet bearbeiten
   const handleUpdateJet = async (jetData, jetId) => {
     try {
       let coverImageUrl = jetData.image_url;
-      let galleryUrls = [];
 
+      // 👇 Startpunkt: bestehende Galerie aus dem Formular
+      let finalGallery = Array.isArray(jetData.existing_gallery_urls)
+        ? [...jetData.existing_gallery_urls]
+        : [];
+
+      // Entfernte Bilder rausfiltern
+      if (
+        Array.isArray(jetData.removed_gallery_urls) &&
+        jetData.removed_gallery_urls.length > 0
+      ) {
+        finalGallery = finalGallery.filter(
+          (url) => !jetData.removed_gallery_urls.includes(url)
+        );
+      }
+
+      // Cover-Bild neu hochladen (falls neues File)
       if (jetData.image_file) {
         const fileExt = jetData.image_file.name.split('.').pop();
         const fileName = `${profile.id}_cover_${Date.now()}.${fileExt}`;
@@ -879,6 +1464,8 @@ export default function Dashboard() {
         coverImageUrl = publicUrl;
       }
 
+      // Neue Galerie-Files hochladen (wie bisher)
+      let newGalleryUrls = [];
       if (jetData.gallery_files && jetData.gallery_files.length > 0) {
         const uploadPromises = Array.from(jetData.gallery_files)
           .slice(0, 10)
@@ -896,8 +1483,11 @@ export default function Dashboard() {
               .getPublicUrl(`public/${fileName}`);
             return publicUrl;
           });
-        galleryUrls = await Promise.all(uploadPromises);
+        newGalleryUrls = await Promise.all(uploadPromises);
       }
+
+      // Finale Galerie: bestehende (bereinigt) + neue
+      const mergedGallery = [...finalGallery, ...newGalleryUrls];
 
       const updateData = {
         name: jetData.name,
@@ -916,11 +1506,9 @@ export default function Dashboard() {
         year_built: jetData.year_built,
         allow_empty_legs: jetData.allow_empty_legs,
         empty_leg_discount: jetData.empty_leg_discount,
+        // 👇 NEU: Galerie immer mitschicken (auch wenn leer)
+        gallery_urls: mergedGallery.length > 0 ? mergedGallery : null,
       };
-
-      if (galleryUrls.length > 0) {
-        updateData.gallery_urls = galleryUrls;
-      }
 
       const { data: updatedJet, error } = await supabase
         .from('jets')
@@ -938,6 +1526,7 @@ export default function Dashboard() {
       showToast('❌ Fehler beim Aktualisieren: ' + err.message, 'error');
     }
   };
+
 
     // --- NEU: Jet schnell verschieben ---
   const handleRelocateJet = async (jet) => {
@@ -1467,11 +2056,46 @@ if (destAirport) {
       icon: '🔥',
       badge: stats.activeEmptyLegs,
     },
+    { id: 'simulator', label: 'Preis-Simulator', icon: '🧮' },
     { id: 'profile', label: 'Profil', icon: '👤' },
   ];
 
   if (loading)
     return <div className="dashboard-loading">Lade Dashboard...</div>;
+    if (profile?.role === 'charter' && profile?.is_approved === false) {
+    return (
+      <div className="dashboard">
+        <div className="dashboard-header">
+          <h1>Dashboard (gesperrt)</h1>
+        </div>
+        <div
+          style={{
+            maxWidth: '600px',
+            marginTop: '24px',
+            padding: '20px',
+            borderRadius: '12px',
+            border: '1px solid #fbbf24',
+            background: '#fffbeb',
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>Ihr Account wird geprüft</h2>
+          <p style={{ lineHeight: 1.6 }}>
+            Vielen Dank für Ihre Registrierung als Charterfirma bei JetOpti.
+            <br />
+            Ihr Konto wurde erfolgreich angelegt und wird nun manuell
+            freigegeben. Sobald die Prüfung abgeschlossen ist, erhalten Sie eine
+            Bestätigung per E-Mail und können dieses Dashboard vollständig
+            nutzen.
+          </p>
+          <p style={{ marginTop: '12px', color: '#6b7280', fontSize: '0.9rem' }}>
+            Falls Sie Rückfragen haben, kontaktieren Sie bitte den JetOpti
+            Support.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="dashboard">
@@ -1936,6 +2560,14 @@ if (destAirport) {
             )}
           </div>
         )}
+
+                {/* PREIS-SIMULATOR TAB */}
+        {activeTab === 'simulator' && (
+          <div className="simulator-section">
+            <PriceSimulator airports={airports} />
+          </div>
+        )}
+
 
                {/* PROFIL TAB (JETZT BEARBEITBAR) */}
         {activeTab === 'profile' && (

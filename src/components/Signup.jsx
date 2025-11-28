@@ -15,7 +15,7 @@ export default function Signup({ onSwitchToLogin, onClose }) {
     companyName: '',
     firstName: '',
     lastName: '',
-    phone: ''
+    phone: '',
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -24,11 +24,11 @@ export default function Signup({ onSwitchToLogin, onClose }) {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
-  // --- START: KORRIGIERTE HANDLESUBMIT FUNKTION ---
+  // --- KORRIGIERTE HANDLESUBMIT FUNKTION ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -55,45 +55,48 @@ export default function Signup({ onSwitchToLogin, onClose }) {
       setLoading(false);
       return;
     }
-    if (formData.role === 'customer' && (!formData.firstName || !formData.lastName)) {
+    if (
+      formData.role === 'customer' &&
+      (!formData.firstName || !formData.lastName)
+    ) {
       setError('Bitte Vor- und Nachnamen eingeben');
       setLoading(false);
       return;
     }
 
     // --- HIER IST DER FIX ---
-    // Bereite das userData-Objekt für den AuthContext vor
+    const isCharter = formData.role === 'charter_company';
+
+    // Basisdaten für Auth + Profile
     const userData = {
-      role: formData.role,
-      phone: formData.phone || null // Dein AuthContext behandelt 'phone' korrekt
+      role: isCharter ? 'charter_company' : 'customer',
+      phone: formData.phone || null,
+      // Kunde ist sofort freigeschaltet, Charterfirma nach Prüfung
+      is_approved: isCharter ? false : true,
     };
 
-    // Fülle das 'company_name'-Feld basierend auf der Rolle
     if (formData.role === 'customer') {
-      // Für Kunden: Kombiniere Vor- und Nachname
       userData.company_name = `${formData.firstName} ${formData.lastName}`;
-      
-      // Diese senden wir mit, auch wenn AuthContext sie (noch) nicht nutzt
       userData.first_name = formData.firstName;
       userData.last_name = formData.lastName;
     } else {
-      // Für Charterfirmen: Verwende den Firmennamen
       userData.company_name = formData.companyName;
     }
     // --- ENDE DES FIX ---
 
     // Sign up
     const { data, error } = await signUp(
-      formData.email, 
+      formData.email,
       formData.password,
-      userData // Übergebe das neu erstellte, korrekte userData-Objekt
+      userData
     );
 
     if (error) {
-      // Dein AuthContext.jsx wirft jetzt den 'NOT NULL'-Fehler
-      setError(error.message === 'User already registered' 
-        ? 'Diese Email ist bereits registriert' 
-        : "Datenbankfehler: " + error.message); // Zeige den echten DB-Fehler an
+      setError(
+        error.message === 'User already registered'
+          ? 'Diese Email ist bereits registriert'
+          : 'Datenbankfehler: ' + error.message
+      );
       setLoading(false);
     } else {
       setSuccess(true);
@@ -104,18 +107,24 @@ export default function Signup({ onSwitchToLogin, onClose }) {
   };
   // --- ENDE: KORRIGIERTE HANDLESUBMIT FUNKTION ---
 
-
   if (success) {
     return (
       <div className="auth-container">
         <div className="auth-modal">
-          <button className="auth-close" onClick={onClose}>×</button>
-          
+          <button className="auth-close" onClick={onClose}>
+            ×
+          </button>
+
           <div className="auth-success">
             <div className="success-icon">✓</div>
             <h2>Erfolgreich registriert! 🎉</h2>
-            <p>Bitte überprüfen Sie Ihre Email um die Registrierung abzuschließen.</p>
-            <p style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
+            <p>
+              Bitte überprüfen Sie Ihre Email, um die Registrierung
+              abzuschließen.
+            </p>
+            <p
+              style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}
+            >
               Dieses Fenster schließt sich automatisch...
             </p>
           </div>
@@ -127,19 +136,17 @@ export default function Signup({ onSwitchToLogin, onClose }) {
   return (
     <div className="auth-container">
       <div className="auth-modal">
-        <button className="auth-close" onClick={onClose}>×</button>
-        
+        <button className="auth-close" onClick={onClose}>
+          ×
+        </button>
+
         <div className="auth-header">
           <h2>Charterfirma registrieren</h2>
-          <p>Erstellen Sie Ihren Account</p>
+          <p>Erstellen Sie Ihren JetOpti-Account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-          {error && (
-            <div className="auth-error">
-              ⚠️ {error}
-            </div>
-          )}
+          {error && <div className="auth-error">⚠️ {error}</div>}
 
           <div className="form-group">
             <label htmlFor="role">Ich bin...</label>
@@ -258,26 +265,28 @@ export default function Signup({ onSwitchToLogin, onClose }) {
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="auth-submit"
-            disabled={loading}
-          >
+          <button type="submit" className="auth-submit" disabled={loading}>
             {loading ? 'Wird registriert...' : 'Jetzt registrieren'}
           </button>
 
           <p className="auth-terms">
             Mit der Registrierung akzeptieren Sie unsere{' '}
-            <a href="/agb" target="_blank">AGB</a> und{' '}
-            <a href="/datenschutz" target="_blank">Datenschutzerklärung</a>
+            <a href="/agb" target="_blank" rel="noreferrer">
+              AGB
+            </a>{' '}
+            und{' '}
+            <a href="/datenschutz" target="_blank" rel="noreferrer">
+              Datenschutzerklärung
+            </a>
+            .
           </p>
         </form>
 
         <div className="auth-footer">
           <p>
             Bereits registriert?{' '}
-            <button 
-              className="auth-switch" 
+            <button
+              className="auth-switch"
               onClick={onSwitchToLogin}
               disabled={loading}
             >
