@@ -1258,3 +1258,90 @@ button {
     padding: 6px 12px;
   }
 }
+/* ============================================
+   COMING SOON BADGE & STYLING
+============================================ */
+
+/* Coming Soon Badge in Hero */
+.coming-soon-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+  color: white;
+  padding: 12px 30px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 30px;
+  animation: pulse 2s infinite;
+  box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 10px 35px rgba(255, 107, 107, 0.6);
+  }
+}
+
+/* Update screenshot badges to say "Coming Soon" */
+.screenshot-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+  backdrop-filter: blur(10px);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+/* Make buttons work as scroll-to-contact instead of links */
+button.btn-primary,
+button.btn-secondary,
+button.btn-primary-large,
+button.btn-secondary-large,
+button.btn-showcase-primary,
+button.btn-showcase-secondary {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+button.btn-primary:hover,
+button.btn-primary-large:hover,
+button.btn-showcase-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+
+button.btn-secondary:hover,
+button.btn-secondary-large:hover,
+button.btn-showcase-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-3px);
+}
+
+/* Mobile responsiveness for coming soon badge */
+@media (max-width: 768px) {
+  .coming-soon-badge {
+    font-size: 14px;
+    padding: 10px 24px;
+    margin-bottom: 25px;
+  }
+}
+
+@media (max-width: 480px) {
+  .coming-soon-badge {
+    font-size: 12px;
+    padding: 8px 20px;
+  }
+}
