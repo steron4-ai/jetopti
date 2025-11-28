@@ -1,20 +1,23 @@
-// src/pages/Landing.jsx
+// src/pages/Landing.jsx - COMING SOON VERSION
 
 import { Link } from 'react-router-dom';
 import '../styles/Landing.css';
 import ContactForm from '../components/ContactForm';
 
 export default function Landing() {
+  // Scroll to contact form
+  const scrollToContact = () => {
+    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="landing-page">
       
-      {/* NAVBAR */}
+      {/* NAVBAR - Hidden */}
       <nav className="navbar">
         <div className="nav-container">
           <div className="nav-menu">
-            <Link to="/map" className="nav-link">View Jets</Link>
-            <Link to="/dashboard" className="nav-link">For Charter Companies</Link>
-            <Link to="/dashboard" className="btn-nav">List Your Fleet</Link>
+            {/* Links removed - Coming Soon! */}
           </div>
         </div>
       </nav>
@@ -33,12 +36,16 @@ export default function Landing() {
             <source src="/videos/hero-video.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
-          {/* Dark overlay for text readability */}
           <div className="hero-video-overlay"></div>
         </div>
 
         {/* Hero Content */}
         <div className="hero-content">
+          {/* Coming Soon Badge */}
+          <div className="coming-soon-badge">
+            🚀 Coming Soon - Join the Waitlist
+          </div>
+          
           <img 
             src="/images/logo.png" 
             alt="JetOpti Logo" 
@@ -49,26 +56,12 @@ export default function Landing() {
             AI-powered marketplace connecting charter companies with customers worldwide
           </p>
           <div className="hero-cta">
-            <Link to="/dashboard" className="btn-primary">
-              List Your Fleet
-            </Link>
-            <Link to="/map" className="btn-secondary">
-              Find Your Perfect Jet
-            </Link>
-          </div>
-          <div className="hero-stats">
-            <div className="stat">
-              <div className="stat-number">$4B</div>
-              <div className="stat-label">Market Size</div>
-            </div>
-            <div className="stat">
-              <div className="stat-number">50K+</div>
-              <div className="stat-label">Annual Flights</div>
-            </div>
-            <div className="stat">
-              <div className="stat-number">200+</div>
-              <div className="stat-label">Global Operators</div>
-            </div>
+            <button onClick={scrollToContact} className="btn-primary">
+              Join Waitlist
+            </button>
+            <button onClick={scrollToContact} className="btn-secondary">
+              Get Early Access
+            </button>
           </div>
         </div>
       </section>
@@ -224,35 +217,33 @@ export default function Landing() {
 
           </div>
 
-          {/* Dual CTA */}
+          {/* Dual CTA - NOW WITH WAITLIST */}
           <div className="how-cta-dual">
             <div className="cta-column">
               <h3>Charter Companies</h3>
               <p>Join our network and reach more customers</p>
-              <Link to="/dashboard" className="btn-primary-large">
-                List Your Fleet
-              </Link>
-              <p className="cta-subtitle">No fees until you get bookings</p>
+              <button onClick={scrollToContact} className="btn-primary-large">
+                Join Waitlist
+              </button>
+              <p className="cta-subtitle">Be among the first to launch</p>
             </div>
             
             <div className="cta-divider"></div>
 
             <div className="cta-column">
               <h3>Travelers</h3>
-              <p>Find and book your perfect private jet</p>
-              <Link to="/map" className="btn-secondary-large">
-                Find Your Jet
-              </Link>
-              <p className="cta-subtitle">Compare prices • Instant booking</p>
+              <p>Get notified when we launch</p>
+              <button onClick={scrollToContact} className="btn-secondary-large">
+                Get Early Access
+              </button>
+              <p className="cta-subtitle">Exclusive early bird discounts</p>
             </div>
           </div>
 
         </div>
       </section>
 
-      {/* ========================================
-          SCREENSHOT SHOWCASE SECTION - NEU!
-      ======================================== */}
+      {/* SCREENSHOT SHOWCASE SECTION */}
       <section className="showcase-section">
         <div className="showcase-container">
           
@@ -271,7 +262,7 @@ export default function Landing() {
                   alt="Interactive Jet Map" 
                   className="screenshot-img"
                 />
-                <div className="screenshot-badge">Live Demo</div>
+                <div className="screenshot-badge">Coming Soon</div>
               </div>
               <div className="screenshot-content">
                 <h3>🗺️ Interactive Map</h3>
@@ -292,7 +283,7 @@ export default function Landing() {
                   alt="Charter Company Dashboard" 
                   className="screenshot-img"
                 />
-                <div className="screenshot-badge">For Charter Companies</div>
+                <div className="screenshot-badge">Coming Soon</div>
               </div>
               <div className="screenshot-content">
                 <h3>📊 Smart Dashboard</h3>
@@ -312,7 +303,7 @@ export default function Landing() {
                   alt="Jet Details View" 
                   className="screenshot-img"
                 />
-                <div className="screenshot-badge">Customer View</div>
+                <div className="screenshot-badge">Coming Soon</div>
               </div>
               <div className="screenshot-content">
                 <h3>✈️ Detailed Jet Info</h3>
@@ -332,7 +323,7 @@ export default function Landing() {
                   alt="AI Matching Result" 
                   className="screenshot-img"
                 />
-                <div className="screenshot-badge">AI Powered</div>
+                <div className="screenshot-badge">Coming Soon</div>
               </div>
               <div className="screenshot-content">
                 <h3>🎯 Perfect Match</h3>
@@ -352,7 +343,7 @@ export default function Landing() {
                   alt="Hot Deals Feature" 
                   className="screenshot-img"
                 />
-                <div className="screenshot-badge">Save Money</div>
+                <div className="screenshot-badge">Coming Soon</div>
               </div>
               <div className="screenshot-content">
                 <h3>🔥 Hot Deals</h3>
@@ -367,16 +358,16 @@ export default function Landing() {
 
           </div>
 
-          {/* CTA */}
+          {/* CTA - NOW WAITLIST */}
           <div className="showcase-cta">
-            <h3>Ready to experience it yourself?</h3>
+            <h3>Want to be first to try JetOpti?</h3>
             <div className="showcase-cta-buttons">
-              <Link to="/map" className="btn-showcase-primary">
-                Explore Live Map
-              </Link>
-              <Link to="/dashboard" className="btn-showcase-secondary">
-                Try Dashboard Demo
-              </Link>
+              <button onClick={scrollToContact} className="btn-showcase-primary">
+                Join Waitlist
+              </button>
+              <button onClick={scrollToContact} className="btn-showcase-secondary">
+                Get Early Access
+              </button>
             </div>
           </div>
 
