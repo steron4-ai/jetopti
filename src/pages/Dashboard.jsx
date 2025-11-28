@@ -1599,8 +1599,7 @@ export default function Dashboard() {
         .eq('id', bookingId);
       if (bookingError) throw bookingError;
 
-      // 4. Jet-Status auf "gebucht" setzen
-            // 4. Jet-Status auf "gebucht" setzen + aktuelle Route speichern
+      // 4. Jet-Status auf "gebucht" setzen + aktuelle Route speichern
       const { error: jetStatusError } = await supabase
         .from('jets')
         .update({
@@ -1610,145 +1609,98 @@ export default function Dashboard() {
         })
         .eq('id', booking.jet_id);
 
-
       if (jetStatusError) throw jetStatusError;
       console.log('✅ Jet-Status auf "gebucht" gesetzt');
 
-      // --- NEUER, KORRIGIERTER BLOCK (ersetzt Zeile 617-691) ---
-      if (jet.allow_empty_legs) {
-        console.log('🔥 Prüfe, ob Empty Leg erstellt werden soll...');
-        
-        // Finde Flughäfen
-        const startAirport = airports.find(a => 
-          a.iata.toUpperCase() === booking.from_location.toUpperCase()
-        );
-        const jetLocation = airports.find(a => 
-          a.iata.toUpperCase() === (jet.current_iata || "").toUpperCase()
-        );
-        
-        if (startAirport && jetLocation && jetLocation.iata !== startAirport.iata) {
-          // Distanz berechnen
-          const R = 6371;
-          const toRad = (deg) => (deg * Math.PI) / 180;
-          const dLat = toRad(startAirport.lat - jetLocation.lat);
-          const dLon = toRad(startAirport.lon - jetLocation.lon);
-          const a = Math.sin(dLat / 2) ** 2 + 
-                    Math.cos(toRad(jetLocation.lat)) * Math.cos(toRad(startAirport.lat)) *
-                    Math.sin(dLon / 2) ** 2;
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          const distanceKm = R * c;
-          
-          // Preis berechnen
-          let base = 2500;
-          let perKm = 27; // Fallback
-          if (jet.price_per_km) perKm = jet.price_per_km; // Echter Preis
-          else if (jet.type === "Very Light Jet") perKm = 22;
-          else if (jet.type === "Light Jet") perKm = 25;
-          // (Restliche Typen...)
-          
-          const normalPrice = Math.round(Math.max(base + distanceKm * perKm, jet.min_booking_price || 5000));
-          const discount = jet.empty_leg_discount || 50;
-          const discountedPrice = Math.round(normalPrice * (1 - discount / 100));
-          
-          // Verfügbarkeit berechnen
-          const departureTime = new Date(booking.departure_date);
-          const leadTimeMs = (jet.lead_time_hours || 4) * 60 * 60 * 1000;
-          const emptyLegDurationHours = distanceKm / 800;
-          const emptyLegDurationMs = emptyLegDurationHours * 60 * 60 * 1000;
-          const safetyBufferMs = 2 * 60 * 60 * 1000;
-          const availableUntil = new Date(
-            departureTime.getTime() - leadTimeMs - emptyLegDurationMs - safetyBufferMs
-          );
+      // 5. OPTIONAL: Empty Leg über Edge Function im Backend erzeugen
+      try {
+        const { data, error } = await supabase.functions.invoke(
+          'create-empty-leg',
+          {
+            body: { bookingId }, // nur die ID; Logik bleibt im Backend
+          }
+        );
 
-          // --- HIER IST DER FIX ---
-          // Prüfe, ob die Frist bereits in der Vergangenheit liegt
-          if (availableUntil.getTime() < Date.now()) {
-            console.log('ℹ️ Hot Deal Zeitfenster ist bereits abgelaufen. Es wird kein Deal erstellt.');
-          } else {
-            // Zeitfenster ist gültig -> Hot Deal erstellen
-            const { error: emptyLegError } = await supabase.from("empty_legs").insert({
-              jet_id: jet.id,
-              company_id: profile.id,
-              from_iata: jetLocation.iata,
-              from_lat: jetLocation.lat,
-              from_lng: jetLocation.lon,
-              to_iata: startAirport.iata,
-              to_lat: startAirport.lat,
-              to_lng: startAirport.lon,
-              normal_price: normalPrice,
-              discounted_price: discountedPrice,
-              discount: discount,
-              available_until: availableUntil.toISOString(),
-              is_active: true,
-              reason: "Repositioning flight"
-            });
-            if (emptyLegError) {
-              console.error('❌ Empty Leg Error:', emptyLegError);
-E-Mail-Logik
-              throw emptyLegError;
-            }
-            console.log('✅ Empty Leg erstellt!', jetLocation.iata, '→', startAirport.iata);
-            showToast('🔥 Hot Deal erstellt!', 'success');
-          }
-          // --- ENDE DES FIXES ---
-        } else {
-          console.log('ℹ️ Kein Empty Leg nötig (gleicher Flughafen oder Flughafen nicht gefunden)');
-Two
-        }
-      }
+        if (error) {
+          console.error('❌ Empty-Leg-Funktion Fehler:', error);
+        } else if (data?.created) {
+          console.log('✅ Empty Leg erstellt:', data.empty_leg);
+          showToast('🔥 Hot Deal erstellt!', 'success');
+        } else {
+          console.log('ℹ️ Kein Empty Leg erstellt:', data?.reason);
+        }
+      } catch (fnError) {
+        console.error(
+          '❌ Fehler beim Aufruf von create-empty-leg:',
+          fnError
+        );
+      }
 
       // --- E-MAIL LOGIK ---
 
-      /// --- KORRIGIERTE E-MAIL LOGIK (1-Template-Trick) ---
-      
-      // E-Mail 3 (an KUNDE): Buchung ist bestätigt
-      const kundenParamsBestaetigt = {
-        recipient_email: booking.customer_email, // <-- HIER IST DER FIX
-        subject: `Ihre JetOpti-Buchung (${booking.id}) wurde bestätigt!`,
-        name_an: booking.customer_name,
-        nachricht: `Gute Nachrichten! Ihre Buchung für die Route ${booking.from_location} → ${booking.to_location} wurde von ${profile?.company_name || 'Ihrer Charterfirma'} bestätigt. Die Charterfirma wird Sie in Kürze bezüglich der Zahlungsabwicklung kontaktieren.`,
-        route: `${booking.from_location} → ${booking.to_location}`,
-        jet_name: booking.jet_name,
-        // ... (Restliche Variablen)
-        departure_date: new Date(booking.departure_date).toLocaleString('de-DE'),
-        customer_name: booking.customer_name,
-        customer_email: booking.customer_email,
-        customer_phone: booking.customer_phone || 'N/A',
-        total_price: booking.total_price.toLocaleString(),
-        booking_id: booking.id
-      };
-      
-      try {
-        await emailjs.send(emailServiceId, templateGenerisch, kundenParamsBestaetigt, emailPublicKey);
-        console.log('✅ E-Mail "Buchung Bestätigt" an Kunden gesendet');
-      } catch (emailError) {
-        console.warn("⚠️ E-Mail (Bestätigung-Kunde) konnte nicht gesendet werden:", emailError);
-      }
+      // E-Mail 3 (an KUNDE): Buchung ist bestätigt
+      const kundenParamsBestaetigt = {
+        recipient_email: booking.customer_email, // <-- HIER IST DER FIX
+        subject: `Ihre JetOpti-Buchung (${booking.id}) wurde bestätigt!`,
+        name_an: booking.customer_name,
+        nachricht: `Gute Nachrichten! Ihre Buchung für die Route ${booking.from_location} → ${booking.to_location} wurde von ${profile?.company_name || 'Ihrer Charterfirma'} bestätigt. Die Charterfirma wird Sie in Kürze bezüglich der Zahlungsabwicklung kontaktieren.`,
+        route: `${booking.from_location} → ${booking.to_location}`,
+        jet_name: booking.jet_name,
+        departure_date: new Date(booking.departure_date).toLocaleString('de-DE'),
+        customer_name: booking.customer_name,
+        customer_email: booking.customer_email,
+        customer_phone: booking.customer_phone || 'N/A',
+        total_price: booking.total_price.toLocaleString(),
+        booking_id: booking.id,
+      };
 
-      // E-Mail 4 (an CHARTER): Kundendaten für externe Zahlung
-      const charterParams = {
-        recipient_email: profile?.booking_notification_email || profile?.email, // <-- HIER IST DER FIX
-        subject: `Akzeptierte Buchung (${booking.id}): ${booking.from_location} → ${booking.to_location}`,
-        name_an: profile?.company_name || 'Team',
-        nachricht: `Sie haben die Buchung (ID: ${booking.id}) akzeptiert und der Kunde wurde benachrichtigt. Bitte kontaktieren Sie den Kunden nun bezüglich der Zahlungsabwicklung:`,
-        // ... (Restliche Variablen)
-        route: `${booking.from_location} → ${booking.to_location}`,
-        jet_name: booking.jet_name,
-        departure_date: new Date(booking.departure_date).toLocaleString('de-DE'),
-        customer_name: booking.customer_name,
-        customer_email: booking.customer_email,
-        customer_phone: booking.customer_phone || 'Nicht angegeben',
-        total_price: booking.total_price.toLocaleString(),
-        booking_id: booking.id
-      };
+      try {
+        await emailjs.send(
+          emailServiceId,
+          templateGenerisch,
+          kundenParamsBestaetigt,
+          emailPublicKey
+        );
+        console.log('✅ E-Mail "Buchung Bestätigt" an Kunden gesendet');
+      } catch (emailError) {
+        console.warn(
+          '⚠️ E-Mail (Bestätigung-Kunde) konnte nicht gesendet werden:',
+          emailError
+        );
+      }
 
-      try {
-        await emailjs.send(emailServiceId, templateGenerisch, charterParams, emailPublicKey);
-        console.log('✅ Kontaktdaten-E-Mail an Charterfirma gesendet');
-      } catch (emailError) {
-        console.warn("⚠️ E-Mail an Charterfirma konnte nicht gesendet werden:", emailError);
-      }
-      // --- ENDE E-MAIL LOGIK ---
+      // E-Mail 4 (an CHARTER): Kundendaten für externe Zahlung
+      const charterParams = {
+        recipient_email:
+          profile?.booking_notification_email || profile?.email, // <-- HIER IST DER FIX
+        subject: `Akzeptierte Buchung (${booking.id}): ${booking.from_location} → ${booking.to_location}`,
+        name_an: profile?.company_name || 'Team',
+        nachricht: `Sie haben die Buchung (ID: ${booking.id}) akzeptiert und der Kunde wurde benachrichtigt. Bitte kontaktieren Sie den Kunden nun bezüglich der Zahlungsabwicklung:`,
+        route: `${booking.from_location} → ${booking.to_location}`,
+        jet_name: booking.jet_name,
+        departure_date: new Date(booking.departure_date).toLocaleString('de-DE'),
+        customer_name: booking.customer_name,
+        customer_email: booking.customer_email,
+        customer_phone: booking.customer_phone || 'Nicht angegeben',
+        total_price: booking.total_price.toLocaleString(),
+        booking_id: booking.id,
+      };
+
+      try {
+        await emailjs.send(
+          emailServiceId,
+          templateGenerisch,
+          charterParams,
+          emailPublicKey
+        );
+        console.log('✅ Kontaktdaten-E-Mail an Charterfirma gesendet');
+      } catch (emailError) {
+        console.warn(
+          '⚠️ E-Mail an Charterfirma konnte nicht gesendet werden:',
+          emailError
+        );
+      }
+      // --- ENDE E-MAIL LOGIK ---
 
       await loadEmptyLegs();
 
@@ -1763,6 +1715,7 @@ Two
       showToast(`❌ Fehler: ${err.message}`, 'error');
     }
   };
+
 
   // Buchung ablehnen
   const handleRejectBooking = async (bookingId) => {
