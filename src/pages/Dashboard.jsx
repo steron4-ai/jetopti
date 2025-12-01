@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { MAP_ROUTE } from '../lib/routes';
 import emailjs from '@emailjs/browser';
 import './Dashboard.css';
 import Toast from '../components/Toast';
@@ -1143,7 +1144,7 @@ export default function Dashboard() {
         <div className="dashboard-header">
           <h1>Dashboard</h1>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(MAP_ROUTE)}
             className="btn-secondary"
           >
             ← Zurück zur Karte
@@ -1187,7 +1188,7 @@ export default function Dashboard() {
         <div className="dashboard-header">
           <h1>Dashboard</h1>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(MAP_ROUTE)}
             className="btn-secondary"
           >
             ← Zurück zur Karte
@@ -2055,7 +2056,7 @@ if (destAirport) {
       <div className="dashboard-header">
         <h1>Dashboard</h1>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate(MAP_ROUTE)}
           className="btn-secondary"
         >
           ← Zurück zur Karte

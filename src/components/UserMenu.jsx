@@ -3,6 +3,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './UserMenu.css';
+import { MAP_ROUTE } from '../lib/routes';
+
 
 export default function UserMenu() {
   const {
@@ -33,7 +35,8 @@ export default function UserMenu() {
   const handleLogout = async () => {
     await signOut();
     setIsOpen(false);
-    navigate('/');
+    navigate(MAP_ROUTE);
+
   };
 
   const getRoleName = () => {
