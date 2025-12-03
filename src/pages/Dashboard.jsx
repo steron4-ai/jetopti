@@ -9,6 +9,9 @@ import { MAP_ROUTE } from '../lib/routes';
 import emailjs from '@emailjs/browser';
 import './Dashboard.css';
 import Toast from '../components/Toast';
+import { useCurrency } from '../lib/CurrencyContext';
+import AirportSearchInput from '../components/AirportSearchInput';
+
 
 // --- NEUE PROFIL-EDITOR KOMPONENTE ---
 function ProfileEditor({ profile, onSave }) {
@@ -768,7 +771,31 @@ function TabNav({ tabs, activeTab, onTabChange }) {
   );
 }
 // --- NEU: Preis-Simulator für Charterfirmen ----------------------
+
 function PriceSimulator({ airports }) {
+  const { formatPrice } = useCurrency();
+
+  // ✨ REALISTISCHE MARKTPREISE (Durchschnittswerte aus der Branche)
+  const JET_TYPE_DEFAULTS = {
+    'Very Light Jet': { hourlyRate: 3000, minPrice: 4000 },
+    'Light Jet': { hourlyRate: 4500, minPrice: 5000 },
+    'Super Light Jet': { hourlyRate: 5000, minPrice: 6000 },
+    'Midsize Jet': { hourlyRate: 6000, minPrice: 7000 },
+    'Super Midsize Jet': { hourlyRate: 7500, minPrice: 9000 },
+    'Heavy Jet': { hourlyRate: 9500, minPrice: 12000 },
+    'Ultra Long Range': { hourlyRate: 12000, minPrice: 15000 },
+  };
+
+  // 🔍 VALIDIERUNGSBEREICHE (±40% Toleranz)
+  const getValidationRange = (jetType) => {
+    const defaults = JET_TYPE_DEFAULTS[jetType];
+    return {
+      minRealistic: Math.round(defaults.hourlyRate * 0.6), // -40%
+      maxRealistic: Math.round(defaults.hourlyRate * 1.4), // +40%
+      recommended: defaults.hourlyRate,
+    };
+  };
+
   const [form, setForm] = useState({
     jetType: 'Light Jet',
     pricePerHour: 4500,
@@ -776,33 +803,70 @@ function PriceSimulator({ airports }) {
     fromIATA: '',
     toIATA: '',
     passengers: 4,
-    dateTime: new Date().toISOString().slice(0, 16), // yyyy-MM-ddTHH:mm
+    dateTime: new Date().toISOString().slice(0, 16),
     roundtrip: false,
   });
 
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [priceWarning, setPriceWarning] = useState(null);
 
-  const CRUISE_SPEED_BY_CLASS = {
-    'Very Light Jet': 620,
-    'Light Jet': 720,
-    'Super Light Jet': 760,
-    'Midsize Jet': 800,
-    'Super Midsize Jet': 830,
-    'Heavy Jet': 850,
-    'Ultra Long Range': 900,
+  // ✨ PREIS-VALIDIERUNG
+  const validatePrice = (jetType, price) => {
+    const range = getValidationRange(jetType);
+    
+    if (price < range.minRealistic) {
+      return {
+        type: 'low',
+        message: `⚠️ Ungewöhnlich niedrig für ${jetType}. Marktüblich: ${range.recommended.toLocaleString()} €/h`,
+      };
+    }
+    
+    if (price > range.maxRealistic) {
+      return {
+        type: 'high',
+        message: `⚠️ Ungewöhnlich hoch für ${jetType}. Marktüblich: ${range.recommended.toLocaleString()} €/h`,
+      };
+    }
+    
+    return null;
   };
 
-  const PREMIUM_AIRPORTS = new Set([
-    'LHR','LGW','LCY',
-    'CDG','NCE','LBG',
-    'FRA','MUC','ZRH','GVA','VIE',
-    'IBZ','OLB','PMI',
-    'JFK','EWR','LAX','SFO','LAS',
-    'DXB','DOH','HKG','SIN',
-  ]);
+  // 🔄 HANDLER FÜR JET-TYP ÄNDERUNG (Auto-Anpassung)
+  const handleJetTypeChange = (e) => {
+    const newJetType = e.target.value;
+    const defaults = JET_TYPE_DEFAULTS[newJetType];
 
+    console.log(`✈️ Jet-Typ geändert zu: ${newJetType}`);
+    console.log(`💰 Auto-Anpassung: ${defaults.hourlyRate} €/h, Min: ${defaults.minPrice} €`);
+
+    setForm((prev) => ({
+      ...prev,
+      jetType: newJetType,
+      pricePerHour: defaults.hourlyRate,
+      minPrice: defaults.minPrice,
+    }));
+
+    // Warnung zurücksetzen
+    setPriceWarning(null);
+  };
+
+  // 📝 HANDLER FÜR MANUELLE PREIS-ÄNDERUNG
+  const handlePriceChange = (e) => {
+    const newPrice = Number(e.target.value);
+    
+    setForm((prev) => ({
+      ...prev,
+      pricePerHour: newPrice,
+    }));
+
+    // Validiere Preis
+    const warning = validatePrice(form.jetType, newPrice);
+    setPriceWarning(warning);
+  };
+
+  // 📝 HANDLER FÜR ANDERE FELDER
   const handleChange = (e) => {
     const { name, type, value, checked } = e.target;
     setForm((prev) => ({
@@ -811,136 +875,55 @@ function PriceSimulator({ airports }) {
     }));
   };
 
-  const findAirport = (iata) => {
-    if (!iata) return null;
-    const up = iata.trim().toUpperCase();
-    return (airports || []).find(
-      (a) => (a.iata || '').toUpperCase() === up
-    ) || null;
-  };
-
-  const distanceKm = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const toRad = (deg) => (deg * Math.PI) / 180;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
-  const calcBlockHours = (distKm, cruiseSpeed, minBlock) => {
-    if (!distKm || distKm <= 0) return 0;
-    const pure = distKm / cruiseSpeed;
-    return Math.max(pure + 0.4, minBlock); // +Taxi/Climb
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setResult(null);
     setLoading(true);
 
     try {
-      const start = findAirport(form.fromIATA);
-      const dest = findAirport(form.toIATA);
-
-      if (!start || !dest) {
-        throw new Error('Start- oder Zielflughafen nicht gefunden (IATA z.B. LHR / DXB).');
+      // Validierung
+      if (!form.fromIATA || !form.toIATA) {
+        throw new Error('Bitte Start- und Zielflughafen auswählen');
       }
 
-      const mainDistanceKm = distanceKm(
-        Number(start.lat),
-        Number(start.lon),
-        Number(dest.lat),
-        Number(dest.lon)
+      if (form.pricePerHour <= 0) {
+        throw new Error('Stundenpreis muss größer als 0 sein');
+      }
+
+      console.log('🧮 Rufe simulate-price auf:', form);
+
+      // ✅ Edge Function aufrufen
+      const { data, error: functionError } = await supabase.functions.invoke(
+        'simulate-price',
+        {
+          body: {
+            jetType: form.jetType,
+            pricePerHour: Number(form.pricePerHour),
+            minPrice: Number(form.minPrice),
+            fromIATA: form.fromIATA,
+            toIATA: form.toIATA,
+            passengers: Number(form.passengers),
+            dateTime: form.dateTime,
+            roundtrip: form.roundtrip,
+          },
+        }
       );
 
-      const cruiseSpeed =
-        CRUISE_SPEED_BY_CLASS[form.jetType] || 780;
-
-      const hourlyRate = Number(form.pricePerHour) || 0;
-      const minPrice = Number(form.minPrice) || 0;
-      const pax = Number(form.passengers) || 1;
-      const isRoundtrip = !!form.roundtrip;
-
-      // Blockzeiten
-      let blockMain = calcBlockHours(mainDistanceKm, cruiseSpeed, 1.0);
-      if (isRoundtrip) blockMain *= 1.8; // simple 80%-Aufschlag
-
-      const flightCost = blockMain * hourlyRate;
-
-      // Crew: 500 € je 4 Blockstunden
-      const crewCost = 500 * Math.max(1, Math.ceil(blockMain / 4));
-
-      // Landings: 400€ pro Leg
-      const legs = isRoundtrip ? 2 : 1;
-      const landingFees = 400 * legs;
-
-      // Pax-Fee ab 5 Pax
-      const passengerFees = pax > 4 ? (pax - 4) * 150 : 0;
-
-      let demandFactor = 1.0;
-      const reasons = [];
-
-      const dep = new Date(form.dateTime);
-      if (!isNaN(dep.getTime())) {
-        const dow = dep.getUTCDay();
-        const month = dep.getUTCMonth() + 1;
-
-        const isWeekend = dow === 5 || dow === 6 || dow === 0;
-        const isSummer = month === 7 || month === 8;
-        const isXmas = month === 12;
-
-        if (isWeekend) {
-          demandFactor += 0.1;
-          reasons.push('Weekend');
-        }
-        if (isSummer) {
-          demandFactor += 0.05;
-          reasons.push('Sommer');
-        }
-        if (isXmas) {
-          demandFactor += 0.1;
-          reasons.push('Weihnachten/Neujahr');
-        }
+      if (functionError) {
+        console.error('Edge Function Error:', functionError);
+        throw new Error(functionError.message || 'Fehler bei der Preisberechnung');
       }
 
-      const fromUp = form.fromIATA.toUpperCase();
-      const toUp = form.toIATA.toUpperCase();
-      if (PREMIUM_AIRPORTS.has(fromUp) || PREMIUM_AIRPORTS.has(toUp)) {
-        demandFactor += 0.15;
-        reasons.push('Premium-Airport');
+      if (!data || !data.ok) {
+        throw new Error(data?.error || 'Unerwartete Antwort vom Server');
       }
 
-      let base =
-        flightCost +
-        crewCost +
-        landingFees +
-        passengerFees;
-
-      base *= demandFactor;
-
-      const total = Math.max(base, minPrice);
-      const minApplied = total === minPrice ? minPrice : 0;
-
-      setResult({
-        distanceKm: mainDistanceKm,
-        blockHours: blockMain,
-        flightCost,
-        crewCost,
-        landingFees,
-        passengerFees,
-        demandFactor,
-        reasons,
-        minApplied,
-        total,
-      });
+      console.log('✅ Simulationsergebnis:', data);
+      setResult(data);
     } catch (err) {
-      console.error(err);
-      setError(err.message || 'Fehler bei der Simulation.');
+      console.error('Simulator-Fehler:', err);
+      setError(err.message || 'Fehler bei der Simulation');
     } finally {
       setLoading(false);
     }
@@ -948,21 +931,21 @@ function PriceSimulator({ airports }) {
 
   return (
     <div className="price-simulator">
-      <h2>🧮 Preis-Simulator (nur Demo, keine Speicherung)</h2>
+      <h2>🧮 Preis-Simulator</h2>
       <p style={{ color: '#6b7280', marginBottom: '16px' }}>
-        Hier können Sie mit Jet-Typ, Stundenpreis und Route spielen.
-        Die Berechnung nutzt die gleiche Logik wie JetOpti (vereinfacht),
-        speichert aber nichts in Ihrer Flottenkonfiguration.
+        Testen Sie verschiedene Routen und Jet-Typen mit unserem Pricing V3
+        Algorithmus.
       </p>
 
       <form className="jet-form" onSubmit={handleSubmit}>
+        {/* Jet-Typ und Preise */}
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '200px' }}>
             <label>Jet-Typ</label>
-            <select
-              name="jetType"
-              value={form.jetType}
-              onChange={handleChange}
+            <select 
+              name="jetType" 
+              value={form.jetType} 
+              onChange={handleJetTypeChange}
             >
               <option>Very Light Jet</option>
               <option>Light Jet</option>
@@ -972,6 +955,9 @@ function PriceSimulator({ airports }) {
               <option>Heavy Jet</option>
               <option>Ultra Long Range</option>
             </select>
+            <small style={{ display: 'block', marginTop: '4px', color: '#6b7280', fontSize: '12px' }}>
+              Beeinflusst Reisegeschwindigkeit & empfohlenen Preis
+            </small>
           </div>
 
           <div style={{ flex: 1, minWidth: '160px' }}>
@@ -980,9 +966,15 @@ function PriceSimulator({ airports }) {
               type="number"
               name="pricePerHour"
               value={form.pricePerHour}
-              onChange={handleChange}
+              onChange={handlePriceChange}
               min="0"
+              step="100"
             />
+            {!priceWarning && (
+              <small style={{ display: 'block', marginTop: '4px', color: '#059669', fontSize: '12px' }}>
+                ✓ Marktüblicher Preis
+              </small>
+            )}
           </div>
 
           <div style={{ flex: 1, minWidth: '160px' }}>
@@ -993,32 +985,63 @@ function PriceSimulator({ airports }) {
               value={form.minPrice}
               onChange={handleChange}
               min="0"
+              step="100"
             />
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '140px' }}>
-            <label>Start (IATA)</label>
-            <input
-              type="text"
-              name="fromIATA"
+        {/* ⚠️ PREIS-WARNUNG */}
+        {priceWarning && (
+          <div
+            style={{
+              marginTop: '12px',
+              padding: '12px',
+              borderRadius: '8px',
+              background: priceWarning.type === 'low' ? '#fef3c7' : '#fee2e2',
+              border: `1px solid ${priceWarning.type === 'low' ? '#fbbf24' : '#fca5a5'}`,
+              color: priceWarning.type === 'low' ? '#92400e' : '#b91c1c',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <span>{priceWarning.message}</span>
+          </div>
+        )}
+
+        {/* Airport Inputs */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '16px',
+            marginTop: '16px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ flex: 1, minWidth: '220px' }}>
+            <AirportSearchInput
+              label="Startflughafen"
+              placeholder="z.B. Leipzig oder LEJ"
               value={form.fromIATA}
-              onChange={handleChange}
-              placeholder="z.B. LHR"
+              airports={airports}
+              onChange={(iata) => setForm((prev) => ({ ...prev, fromIATA: iata }))}
+              required
             />
           </div>
-          <div style={{ flex: 1, minWidth: '140px' }}>
-            <label>Ziel (IATA)</label>
-            <input
-              type="text"
-              name="toIATA"
+
+          <div style={{ flex: 1, minWidth: '220px' }}>
+            <AirportSearchInput
+              label="Zielflughafen"
+              placeholder="z.B. Dubai oder DXB"
               value={form.toIATA}
-              onChange={handleChange}
-              placeholder="z.B. DXB"
+              airports={airports}
+              onChange={(iata) => setForm((prev) => ({ ...prev, toIATA: iata }))}
+              required
             />
           </div>
-          <div style={{ flex: 1, minWidth: '140px' }}>
+
+          <div style={{ flex: 0.7, minWidth: '140px' }}>
             <label>Passagiere</label>
             <input
               type="number"
@@ -1026,21 +1049,44 @@ function PriceSimulator({ airports }) {
               value={form.passengers}
               onChange={handleChange}
               min="1"
+              max="20"
             />
+            <small style={{ display: 'block', marginTop: '4px', color: '#6b7280', fontSize: '12px' }}>
+              Ab 5 Pax: +€150 pro Person
+            </small>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
+        {/* Datum und Rundflug */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '16px',
+            marginTop: '16px',
+            flexWrap: 'wrap',
+          }}
+        >
           <div style={{ flex: 1, minWidth: '220px' }}>
-            <label>Abflug (Datum & Uhrzeit)</label>
+            <label>Abflugdatum & Uhrzeit</label>
             <input
               type="datetime-local"
               name="dateTime"
               value={form.dateTime}
               onChange={handleChange}
             />
+            <small style={{ display: 'block', marginTop: '4px', color: '#6b7280', fontSize: '12px' }}>
+              Beeinflusst Demand-Faktoren
+            </small>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '24px' }}>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginTop: '24px',
+            }}
+          >
             <input
               type="checkbox"
               id="sim_roundtrip"
@@ -1054,11 +1100,12 @@ function PriceSimulator({ airports }) {
 
         <div className="form-actions" style={{ marginTop: '20px' }}>
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Berechne...' : 'Preis simulieren'}
+            {loading ? 'Berechne...' : '🚀 Preis simulieren'}
           </button>
         </div>
       </form>
 
+      {/* Fehler */}
       {error && (
         <div
           style={{
@@ -1074,51 +1121,280 @@ function PriceSimulator({ airports }) {
         </div>
       )}
 
+      {/* ✨ ERGEBNIS */}
       {result && !error && (
         <div
           style={{
-            marginTop: '20px',
-            padding: '16px',
+            marginTop: '24px',
+            padding: '20px',
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
-            background: '#f9fafb',
+            background: '#ffffff',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           }}
         >
-          <h3 style={{ marginTop: 0 }}>Ergebnis</h3>
-          <p style={{ margin: '4px 0' }}>
-            Distanz: <strong>{result.distanceKm.toFixed(0)} km</strong> •
-            Blockzeit: <strong>{result.blockHours.toFixed(1)} h</strong>
-          </p>
-          <p style={{ margin: '4px 0' }}>
-            Flugkosten (Blockzeit × Stundenpreis):{' '}
-            <strong>€{Math.round(result.flightCost).toLocaleString()}</strong>
-          </p>
-          <p style={{ margin: '4px 0' }}>
-            Crewkosten: <strong>€{Math.round(result.crewCost).toLocaleString()}</strong> •
-            Landegebühren: <strong>€{Math.round(result.landingFees).toLocaleString()}</strong> •
-            Pax-Gebühren: <strong>€{Math.round(result.passengerFees).toLocaleString()}</strong>
-          </p>
-          <p style={{ margin: '4px 0' }}>
-            Nachfrage-Faktor:{' '}
-            <strong>
-              × {result.demandFactor.toFixed(2)}{' '}
-              {result.reasons.length > 0 && `(${result.reasons.join(', ')})`}
-            </strong>
-          </p>
-          {result.minApplied > 0 && (
-            <p style={{ margin: '4px 0', color: '#b45309' }}>
-              Mindestpreis griff: Jet hätte günstiger kalkuliert, aber Mindestpreis von{' '}
-              <strong>€{Math.round(result.minApplied).toLocaleString()}</strong> setzt die Untergrenze.
-            </p>
-          )}
-          <p style={{ marginTop: '8px', fontSize: '1.1rem' }}>
-            💰 <strong>Simulierter Gesamtpreis: €{Math.round(result.total).toLocaleString()}</strong>
-          </p>
+          <h3
+            style={{
+              margin: '0 0 16px 0',
+              color: '#111827',
+              fontSize: '18px',
+              fontWeight: '600',
+            }}
+          >
+            ✨ Simulierter Preis
+          </h3>
+
+          {/* Hauptinformationen */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '12px',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div
+              style={{
+                padding: '8px 12px',
+                background: '#f3f4f6',
+                borderRadius: '6px',
+                fontSize: '14px',
+                color: '#374151',
+              }}
+            >
+              📏 <strong>{result.distances.main_km.toLocaleString()}</strong> km
+            </div>
+            <div
+              style={{
+                padding: '8px 12px',
+                background: '#f3f4f6',
+                borderRadius: '6px',
+                fontSize: '14px',
+                color: '#374151',
+              }}
+            >
+              ⏱️ <strong>{result.timing.block_hours}</strong> h Blockzeit
+            </div>
+            {result.roundtrip && (
+              <div
+                style={{
+                  padding: '8px 12px',
+                  background: '#dbeafe',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  color: '#1e40af',
+                  fontWeight: '600',
+                }}
+              >
+                ↔️ Hin- & Rückflug
+              </div>
+            )}
+          </div>
+
+          {/* Hauptpreis */}
+          <div
+            style={{
+              padding: '16px',
+              background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              border: '2px solid #10b981',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '14px',
+                color: '#065f46',
+                marginBottom: '4px',
+                fontWeight: '500',
+              }}
+            >
+              💰 Gesamtpreis
+            </div>
+            <div
+              style={{
+                fontSize: '28px',
+                fontWeight: '700',
+                color: '#065f46',
+              }}
+            >
+              {formatPrice(result.price, { showBoth: true })}
+            </div>
+          </div>
+
+          {/* Preisfaktoren */}
+          {result.breakdown.demand_reasons &&
+            result.breakdown.demand_reasons.length > 0 && (
+              <div
+                style={{
+                  padding: '12px',
+                  background: '#fef3c7',
+                  borderRadius: '6px',
+                  border: '1px solid #fbbf24',
+                  marginBottom: '12px',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: '#92400e',
+                    marginBottom: '6px',
+                  }}
+                >
+                  📈 Preisfaktoren aktiv:
+                </div>
+                <div style={{ fontSize: '13px', color: '#78350f' }}>
+                  {result.breakdown.demand_reasons.join(' • ')}
+                </div>
+              </div>
+            )}
+
+          {/* Breakdown Details */}
+          <details style={{ marginTop: '16px' }}>
+            <summary
+              style={{
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#4b5563',
+                padding: '8px 0',
+              }}
+            >
+              📊 Preisaufschlüsselung anzeigen
+            </summary>
+            <div
+              style={{
+                marginTop: '12px',
+                padding: '12px',
+                background: '#f9fafb',
+                borderRadius: '6px',
+                fontSize: '13px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '6px 0',
+                  borderBottom: '1px solid #e5e7eb',
+                  color: '#374151',
+                }}
+              >
+                <span>Flugkosten</span>
+                <span style={{ fontWeight: '600' }}>
+                  {formatPrice(result.breakdown.base_flight_cost)}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '6px 0',
+                  borderBottom: '1px solid #e5e7eb',
+                  color: '#374151',
+                }}
+              >
+                <span>Crew-Kosten</span>
+                <span style={{ fontWeight: '600' }}>
+                  {formatPrice(result.breakdown.crew_cost)}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '6px 0',
+                  borderBottom: '1px solid #e5e7eb',
+                  color: '#374151',
+                }}
+              >
+                <span>Landegebühren</span>
+                <span style={{ fontWeight: '600' }}>
+                  {formatPrice(result.breakdown.landing_fees)}
+                </span>
+              </div>
+              {result.breakdown.passenger_fees > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '6px 0',
+                    borderBottom: '1px solid #e5e7eb',
+                    color: '#374151',
+                  }}
+                >
+                  <span>Passagier-Gebühren</span>
+                  <span style={{ fontWeight: '600' }}>
+                    {formatPrice(result.breakdown.passenger_fees)}
+                  </span>
+                </div>
+              )}
+              {result.breakdown.demand_factor > 1 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '6px 0',
+                    color: '#b45309',
+                  }}
+                >
+                  <span>Nachfrage-Faktor</span>
+                  <span style={{ fontWeight: '600' }}>
+                    ×{result.breakdown.demand_factor.toFixed(2)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </details>
+
+          {/* Info-Box */}
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '12px',
+              background: '#eff6ff',
+              borderRadius: '6px',
+              border: '1px solid #bfdbfe',
+              fontSize: '13px',
+              color: '#1e40af',
+              lineHeight: '1.5',
+            }}
+          >
+            💡 <strong>Hinweis:</strong> Diese Simulation nutzt unsere Pricing
+            V3 Engine. Echte Buchungen können zusätzliche Faktoren
+            berücksichtigen (z.B. Positionierungskosten, spezielle
+            Anforderungen).
+          </div>
         </div>
       )}
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ===================================================================
 // HAUPTKOMPONENTE: DASHBOARD
@@ -1128,6 +1404,7 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const { currency, setCurrency, formatPrice } = useCurrency();
   const [jets, setJets] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [emptyLegs, setEmptyLegs] = useState([]);
@@ -1137,63 +1414,61 @@ export default function Dashboard() {
   const [airports, setAirports] = useState([]);
   const [toast, setToast] = useState(null);
 
-    // Wenn Charterfirma aber noch nicht freigegeben -> Blockscreen
-  if (profile?.role === 'charter_company' && profile?.is_approved === false) {
-    return (
-      <div className="dashboard">
-        <div className="dashboard-header">
-          <h1>Dashboard</h1>
-          <button
-            onClick={() => navigate(MAP_ROUTE)}
-            className="btn-secondary"
-          >
-            ← Zurück zur Karte
-          </button>
-        </div>
-
-        <div className="dashboard-content">
-          <div
-            style={{
-              maxWidth: '600px',
-              margin: '40px auto',
-              padding: '24px',
-              borderRadius: '12px',
-              border: '1px solid #e5e7eb',
-              background: '#f9fafb',
-              textAlign: 'center',
-            }}
-          >
-            <h2 style={{ marginBottom: '12px' }}>Ihr Firmenkonto wird geprüft</h2>
-            <p style={{ color: '#4b5563', lineHeight: 1.6 }}>
-              Vielen Dank für Ihre Registrierung als Charterfirma.
-              <br />
-              Wir prüfen Ihre Angaben und schalten Ihr JetOpti-Dashboard
-              nach erfolgreicher Verifizierung frei.
-            </p>
-            <p style={{ marginTop: '16px', fontSize: '14px', color: '#6b7280' }}>
-              Bei Rückfragen erreichen Sie uns jederzeit über&nbsp;
-              <a href="mailto:support@jetopti.com">support@jetopti.com</a>.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-
     // ⛔ Falls Charterfirma noch nicht freigegeben ist: Blockscreen anzeigen
   if (profile?.role === 'charter_company' && profile?.is_approved === false) {
     return (
       <div className="dashboard">
         <div className="dashboard-header">
-          <h1>Dashboard</h1>
-          <button
-            onClick={() => navigate(MAP_ROUTE)}
-            className="btn-secondary"
-          >
-            ← Zurück zur Karte
-          </button>
-        </div>
+  <h1>Dashboard</h1>
+
+  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+    {/* Currency Switcher */}
+    <div
+      style={{
+        display: 'inline-flex',
+        borderRadius: '999px',
+        border: '1px solid #e5e7eb',
+        overflow: 'hidden',
+        fontSize: '13px',
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setCurrency('EUR')}
+        style={{
+          padding: '6px 10px',
+          border: 'none',
+          cursor: 'pointer',
+          background: currency === 'EUR' ? '#111827' : 'white',
+          color: currency === 'EUR' ? 'white' : '#4b5563',
+        }}
+      >
+        € EUR
+      </button>
+      <button
+        type="button"
+        onClick={() => setCurrency('USD')}
+        style={{
+          padding: '6px 10px',
+          border: 'none',
+          cursor: 'pointer',
+          background: currency === 'USD' ? '#111827' : 'white',
+          color: currency === 'USD' ? 'white' : '#4b5563',
+        }}
+      >
+        $ USD
+      </button>
+    </div>
+
+    <button
+      onClick={() => navigate('/')}
+      className="btn-secondary"
+    >
+      ← Zurück zur Karte
+    </button>
+  </div>
+</div>
+
 
         <div className="dashboard-content">
           <div
@@ -1574,6 +1849,41 @@ export default function Dashboard() {
     }
   };
 
+// Jet löschen
+const handleDeleteJet = async (jetId) => {
+  if (!window.confirm('Möchten Sie diesen Jet wirklich löschen? Dies kann nicht rückgängig gemacht werden.')) {
+    return;
+  }
+
+  try {
+    // Zuordnung in company_jets löschen
+    const { error: relError } = await supabase
+      .from('company_jets')
+      .delete()
+      .eq('jet_id', jetId)
+      .eq('company_id', profile.id);
+
+    if (relError) {
+      console.warn('⚠️ Zuordnung company_jets konnte nicht gelöscht werden:', relError);
+    }
+
+    // Jet selbst löschen
+    const { error } = await supabase
+      .from('jets')
+      .delete()
+      .eq('id', jetId);
+
+    if (error) throw error;
+
+    setJets((prev) => prev.filter((j) => j.id !== jetId));
+    showToast('Jet erfolgreich gelöscht.', 'info');
+  } catch (err) {
+    console.error('Fehler beim Löschen des Jets:', err);
+    showToast(`❌ Fehler beim Löschen: ${err.message}`, 'error');
+  }
+};
+
+
 
   // Buchung akzeptieren + Empty Leg + E-Mail
   const handleAcceptBooking = async (bookingId) => {
@@ -1859,12 +2169,7 @@ if (destAirport) {
         );
       else console.log('[OK] Zugehöriger Hot Deal deaktiviert');
 
-      // ... in handleCancelBooking ...
-
-      if (legError) console.warn('[WARN] Hot Deal konnte nicht deaktiviert werden:', legError);
-      else console.log('[OK] Zugehöriger Hot Deal deaktiviert');
-
-      // --- NEU: Storno-E-Mail an Kunden senden ---
+            // --- NEU: Storno-E-Mail an Kunden senden ---
       try {
         const kundenParamsStorno = {
           recipient_email: booking.customer_email, // <-- HIER IST DER FIX
@@ -2095,14 +2400,19 @@ if (destAirport) {
               </div>
 
               <div className="stat-card">
-                <div className="stat-icon">💰</div>
-                <div className="stat-info">
-                  <p className="stat-label">Umsatz (Gesamt)</p>
-                  <p className="stat-value">
-                    €{stats.revenue.toLocaleString()}
-                  </p>
-                </div>
-              </div>
+  <div className="stat-icon">💰</div>
+  <div className="stat-info">
+    <p className="stat-label">Umsatz (Gesamt)</p>
+    <p
+      className="stat-value"
+      style={{ fontSize: '0.8rem', lineHeight: 1.3 }}
+    >
+      {formatPrice(stats.revenue, { showBoth: true })}
+    </p>
+  </div>
+</div>
+
+
 
               <div className="stat-card">
                 <div className="stat-icon">🎉</div>
@@ -2269,8 +2579,8 @@ if (destAirport) {
                         ).toLocaleDateString('de-DE')}
                       </td>
                       <td>
-                        €{booking.total_price?.toLocaleString?.() ?? '0'}
-                      </td>
+  {formatPrice(booking.total_price, { showBoth: true })}
+</td>
                       <td>
                         {booking.status === 'pending' && (
                           <div className="booking-actions">
@@ -2430,23 +2740,24 @@ if (destAirport) {
                     >
                       <div>
                         <div
-                          style={{
-                            textDecoration: 'line-through',
-                            color: '#9ca3af',
-                            fontSize: '14px',
-                          }}
-                        >
-                          €{leg.normal_price?.toLocaleString()}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '20px',
-                            fontWeight: '700',
-                            color: '#ef4444',
-                          }}
-                        >
-                          €{leg.discounted_price?.toLocaleString()}
-                        </div>
+  style={{
+    textDecoration: 'line-through',
+    color: '#9ca3af',
+    fontSize: '14px',
+  }}
+>
+  {formatPrice(leg.normal_price, { showBoth: true })}
+</div>
+<div
+  style={{
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#ef4444',
+  }}
+>
+  {formatPrice(leg.discounted_price, { showBoth: true })}
+</div>
+
                       </div>
                       <div
                         style={{

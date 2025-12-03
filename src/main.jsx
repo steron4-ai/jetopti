@@ -1,9 +1,10 @@
 // src/main.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App'; // Importiert deine NEUE App.jsx (den Router)
+import App from './App';
 import './index.css';
 import { AuthProvider } from './lib/AuthContext';
+import { CurrencyProvider } from './lib/CurrencyContext';
 
 // 🔥 KILL SWITCH: Löscht alte Service Worker, die Probleme machen
 if ('serviceWorker' in navigator) {
@@ -27,11 +28,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AuthProvider> {/* AuthProvider MUSS hier außen sein */}
-      <App />
-    </AuthProvider>
+    <CurrencyProvider>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </CurrencyProvider>
   </React.StrictMode>,
-)
+);
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

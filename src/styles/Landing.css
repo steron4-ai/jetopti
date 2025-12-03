@@ -1345,3 +1345,360 @@ button.btn-showcase-secondary:hover {
     padding: 8px 20px;
   }
 }
+/* ============================================
+   HONEST FEATURES SECTION - STATUS BADGES
+============================================ */
+
+
+
+/* Make sure feature cards are positioned relative */
+.features-section .feature-card {
+  position: relative;
+}
+
+/* ============================================
+   COMING SOON SECTION
+============================================ */
+
+/* ============================================
+   COMING SOON SECTION - WITH IMAGES
+============================================ */
+
+.features-coming-soon {
+  margin-top: 100px;
+  padding: 80px 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 30px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+}
+
+.features-coming-soon h3 {
+  font-size: 3rem;
+  color: white;
+  margin-bottom: 60px;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+/* Grid Layout for Coming Soon Cards */
+.coming-soon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Coming Soon Card */
+.coming-soon-card {
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.coming-soon-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* Coming Soon Image Container */
+.coming-soon-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  position: relative;
+}
+
+.coming-soon-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.coming-soon-card:hover .coming-soon-image img {
+  transform: scale(1.05);
+}
+
+/* Coming Soon Badge Overlay */
+.coming-soon-image::after {
+  content: "COMING SOON";
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+  animation: pulse-coming-soon 2s infinite;
+}
+
+@keyframes pulse-coming-soon {
+  0%, 100% {
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 25px rgba(255, 107, 107, 0.6);
+  }
+}
+
+/* Coming Soon Content */
+.coming-soon-content {
+  padding: 30px 25px;
+  text-align: left;
+}
+
+.coming-soon-content h4 {
+  font-size: 1.4rem;
+  color: #1a1a2e;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.coming-soon-content p {
+  color: #666;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ============================================
+   RESPONSIVE
+============================================ */
+
+@media (max-width: 1024px) {
+  .coming-soon-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+  }
+}
+
+@media (max-width: 768px) {
+  .features-coming-soon {
+    padding: 60px 20px;
+    margin-top: 80px;
+  }
+
+  .features-coming-soon h3 {
+    font-size: 2.2rem;
+    margin-bottom: 40px;
+  }
+
+  .coming-soon-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .coming-soon-image {
+    height: 180px;
+  }
+
+  .coming-soon-content {
+    padding: 25px 20px;
+  }
+
+  .coming-soon-content h4 {
+    font-size: 1.2rem;
+  }
+
+  .coming-soon-content p {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .features-coming-soon h3 {
+    font-size: 1.8rem;
+  }
+
+  .coming-soon-image {
+    height: 160px;
+  }
+
+  .coming-soon-content {
+    padding: 20px 15px;
+  }
+
+  .coming-soon-content h4 {
+    font-size: 1.1rem;
+  }
+}
+/* ============================================
+   COMING SOON SECTION - WITH IMAGES
+============================================ */
+
+.features-coming-soon {
+  margin-top: 100px;
+  padding: 80px 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 30px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+}
+
+.features-coming-soon h3 {
+  font-size: 3rem;
+  color: white;
+  margin-bottom: 60px;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+/* Grid Layout for Coming Soon Cards - 4 COLUMNS */
+.coming-soon-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 4 Cards nebeneinander */
+  gap: 30px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Coming Soon Card */
+.coming-soon-card {
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.coming-soon-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* Coming Soon Image Container */
+.coming-soon-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  position: relative;
+}
+
+.coming-soon-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.coming-soon-card:hover .coming-soon-image img {
+  transform: scale(1.05);
+}
+
+/* Coming Soon Badge Overlay */
+.coming-soon-image::after {
+  content: "COMING SOON";
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+  animation: pulse-coming-soon 2s infinite;
+}
+
+@keyframes pulse-coming-soon {
+  0%, 100% {
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 25px rgba(255, 107, 107, 0.6);
+  }
+}
+
+/* Coming Soon Content */
+.coming-soon-content {
+  padding: 30px 25px;
+  text-align: left;
+}
+
+.coming-soon-content h4 {
+  font-size: 1.4rem;
+  color: #1a1a2e;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.coming-soon-content p {
+  color: #666;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ============================================
+   RESPONSIVE
+============================================ */
+
+@media (max-width: 1200px) {
+  .coming-soon-grid {
+    grid-template-columns: repeat(2, 1fr); /* 2 Spalten auf mittleren Bildschirmen */
+    gap: 25px;
+  }
+}
+
+@media (max-width: 768px) {
+  .features-coming-soon {
+    padding: 60px 20px;
+    margin-top: 80px;
+  }
+
+  .features-coming-soon h3 {
+    font-size: 2.2rem;
+    margin-bottom: 40px;
+  }
+
+  .coming-soon-grid {
+    grid-template-columns: 1fr; /* 1 Spalte auf Mobile */
+    gap: 20px;
+  }
+
+  .coming-soon-image {
+    height: 180px;
+  }
+
+  .coming-soon-content {
+    padding: 25px 20px;
+  }
+
+  .coming-soon-content h4 {
+    font-size: 1.2rem;
+  }
+
+  .coming-soon-content p {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .features-coming-soon h3 {
+    font-size: 1.8rem;
+  }
+
+  .coming-soon-image {
+    height: 160px;
+  }
+
+  .coming-soon-content {
+    padding: 20px 15px;
+  }
+
+  .coming-soon-content h4 {
+    font-size: 1.1rem;
+  }
+}

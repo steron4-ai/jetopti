@@ -1062,3 +1062,10 @@ input[name="min_booking_price"] {
   margin-bottom: 15px;
   display: block;
 }
+.airport-select {
+  width: 100%;
+}
+
+.airport-suggestion.active {
+  background: #f3e8ff;
+}

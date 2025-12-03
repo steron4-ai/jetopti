@@ -66,92 +66,147 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* FEATURES SECTION */}
-      <section className="features-section">
-        <div className="features-container">
-          
-          <div className="features-header">
-            <h2>Why JetOpti?</h2>
-            <p>The complete solution for modern charter operations</p>
+
+
+{/* FEATURES SECTION */}
+<section className="features-section">
+  <div className="features-container">
+    
+    <div className="features-header">
+      <h2>Why JetOpti?</h2>
+      <p>Real features, real value - built for the modern charter industry</p>
+    </div>
+
+    <div className="features-grid">
+      
+      {/* Feature 1 - Real-Time Tracking */}
+      <div className="feature-card">
+        <div className="feature-image">
+          <img src="/images/features/live-tracking.jpg" alt="Real-Time Jet Tracking" />
+        </div>
+        <div className="feature-content">
+          <h3>🗺️ Real-Time Tracking</h3>
+          <p>See every jet's exact location live on the map. Track flights in real-time across Europe and beyond. Transparency and trust you won't find anywhere else.</p>
+          <div className="feature-stat">Live ADSB Data</div>
+        </div>
+      </div>
+
+      {/* Feature 2 - Fast Request System */}
+      <div className="feature-card">
+        <div className="feature-image">
+          <img src="/images/features/instant-bookings.jpg" alt="Smart Booking System" />
+        </div>
+        <div className="feature-content">
+          <h3>⚡ Fast Request System</h3>
+          <p>Request bookings in minutes with our streamlined process. Charter companies receive instant notifications and contact you directly. No middleman delays.</p>
+          <div className="feature-stat">Direct Connection</div>
+        </div>
+      </div>
+
+      {/* Feature 3 - Hot Deals */}
+      <div className="feature-card">
+        <div className="feature-image">
+          <img src="/images/features/hot-deal.jpg" alt="Hot Deals System" />
+        </div>
+        <div className="feature-content">
+          <h3>🔥 Hot Deals (Empty Legs)</h3>
+          <p>Automatically created when jets fly back to base. Save up to 75% on premium flights. Real-time updates when new deals become available.</p>
+          <div className="feature-stat">Auto-Generated</div>
+        </div>
+      </div>
+
+      {/* Feature 4 - Smart Search */}
+      <div className="feature-card">
+        <div className="feature-image">
+          <img src="/images/features/smart-search.jpg" alt="Smart Search" />
+        </div>
+        <div className="feature-content">
+          <h3>🎯 Smart Search & Filters</h3>
+          <p>Find your perfect jet instantly. Filter by aircraft type, seats, range, and location. Intelligent algorithm matches your needs with available aircraft.</p>
+          <div className="feature-stat">Instant Results</div>
+        </div>
+      </div>
+
+      {/* Feature 5 - Transparent Pricing */}
+      <div className="feature-card">
+        <div className="feature-image">
+          <img src="/images/features/transparent-pricing.jpg" alt="Transparent Pricing" />
+        </div>
+        <div className="feature-content">
+          <h3>💳 Transparent Pricing</h3>
+          <p>See prices upfront based on distance and aircraft type. No hidden fees, no surprises. Know exactly what you'll pay before you request.</p>
+          <div className="feature-stat">Crystal Clear</div>
+        </div>
+      </div>
+
+      {/* Feature 6 - Fleet Dashboard */}
+      <div className="feature-card">
+        <div className="feature-image">
+          <img src="/images/features/fleet-dashboard.jpg" alt="Fleet Management Dashboard" />
+        </div>
+        <div className="feature-content">
+          <h3>📊 Fleet Dashboard</h3>
+          <p>Complete fleet management for charter companies. Track your jets, manage bookings, create Hot Deals, and monitor performance in real-time.</p>
+          <div className="feature-stat">For Operators</div>
+        </div>
+      </div>
+
+    </div>
+
+    {/* COMING SOON SECTION */}
+    <div className="features-coming-soon">
+      <h3>🚀 Coming in 2026</h3>
+      <div className="coming-soon-grid">
+        
+        {/* Coming Soon 1 - AI Matching */}
+        <div className="coming-soon-card">
+          <div className="coming-soon-image">
+            <img src="/images/features/ai-matching.jpg" alt="AI-Powered Matching" />
           </div>
-
-          <div className="features-grid">
-            
-            {/* Feature 1 - AI Matching */}
-            <div className="feature-card">
-              <div className="feature-image">
-                <img src="/images/features/ai-matching.jpg" alt="AI Matching System" />
-              </div>
-              <div className="feature-content">
-                <h3>AI Matching</h3>
-                <p>AI-powered matching that analyzes customer requests in real-time and connects them with the perfect jet for every flight.</p>
-                <div className="feature-stat">Smart Algorithm</div>
-              </div>
-            </div>
-
-            {/* Feature 2 - Live Tracking */}
-            <div className="feature-card">
-              <div className="feature-image">
-                <img src="/images/features/live-tracking.jpg" alt="Live Tracking System" />
-              </div>
-              <div className="feature-content">
-                <h3>Live Tracking</h3>
-                <p>Real-time jet tracking that lets customers see where aircraft are. Builds trust and reduces support requests.</p>
-                <div className="feature-stat">Real-time Updates</div>
-              </div>
-            </div>
-
-            {/* Feature 3 - Instant Bookings */}
-            <div className="feature-card">
-              <div className="feature-image">
-                <img src="/images/features/instant-bookings.jpg" alt="Instant Booking Interface" />
-              </div>
-              <div className="feature-content">
-                <h3>Instant Bookings</h3>
-                <p>From request to booking in minutes. Automated processes eliminate delays and manual work.</p>
-                <div className="feature-stat">Lightning Fast</div>
-              </div>
-            </div>
-
-            {/* Feature 4 - Smart Analytics */}
-            <div className="feature-card">
-              <div className="feature-image">
-                <img src="/images/features/smart-analytics.jpg" alt="Analytics Dashboard" />
-              </div>
-              <div className="feature-content">
-                <h3>Smart Analytics</h3>
-                <p>Data-driven insights showing exactly which jets are most profitable. Optimize your fleet based on real data.</p>
-                <div className="feature-stat">Data-Driven</div>
-              </div>
-            </div>
-
-            {/* Feature 5 - Dynamic Pricing */}
-            <div className="feature-card">
-              <div className="feature-image">
-                <img src="/images/features/dynamic-pricing.jpg" alt="Dynamic Pricing Engine" />
-              </div>
-              <div className="feature-content">
-                <h3>Dynamic Pricing</h3>
-                <p>AI calculates optimal prices based on demand, season, and competition to maximize your revenue.</p>
-                <div className="feature-stat">Revenue Optimization</div>
-              </div>
-            </div>
-
-            {/* Feature 6 - Global Network */}
-            <div className="feature-card">
-              <div className="feature-image">
-                <img src="/images/features/global-network.jpg" alt="Global Aviation Network" />
-              </div>
-              <div className="feature-content">
-                <h3>Global Network</h3>
-                <p>Connect with customers worldwide. Your jets fly not just locally, but internationally.</p>
-                <div className="feature-stat">Worldwide Reach</div>
-              </div>
-            </div>
-
+          <div className="coming-soon-content">
+            <h4>🤖 AI-Powered Matching</h4>
+            <p>Machine learning that learns from every booking</p>
           </div>
         </div>
-      </section>
+
+        {/* Coming Soon 2 - Dynamic Pricing */}
+        <div className="coming-soon-card">
+          <div className="coming-soon-image">
+            <img src="/images/features/dynamic-pricing.jpg" alt="Dynamic Pricing" />
+          </div>
+          <div className="coming-soon-content">
+            <h4>💰 Dynamic Pricing</h4>
+            <p>AI-optimized pricing based on demand and competition</p>
+          </div>
+        </div>
+
+        {/* Coming Soon 3 - Global Expansion */}
+        <div className="coming-soon-card">
+          <div className="coming-soon-image">
+            <img src="/images/features/global-network.jpg" alt="Global Expansion" />
+          </div>
+          <div className="coming-soon-content">
+            <h4>🌍 Global Expansion</h4>
+            <p>Starting in USA (Florida & Texas) in Q2 2026</p>
+          </div>
+        </div>
+
+        {/* Coming Soon 4 - Mobile App */}
+        <div className="coming-soon-card">
+          <div className="coming-soon-image">
+            <img src="/images/features/mobile-app.jpg" alt="Mobile App" />
+          </div>
+          <div className="coming-soon-content">
+            <h4>📱 Mobile App</h4>
+            <p>Native iOS and Android apps for on-the-go booking</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
 
       {/* HOW IT WORKS SECTION */}
       <section className="how-it-works-section">

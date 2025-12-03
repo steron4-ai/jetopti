@@ -291,18 +291,13 @@ function calculateDemandFactor(
 
     // Last-Minute (< 24h)
     if (hoursUntilFlight < 24) {
-      factor += 0.20;
+      factor += 0.12;
       reasons.push('Last-Minute');
     } else if (hoursUntilFlight < 48) {
-      factor += 0.10;
+      factor += 0.06;
       reasons.push('Kurzfristig');
     }
 
-    // ✨ NEU: Night Operations (vor 6:00 oder nach 22:00 UTC)
-    if (hour < 6 || hour >= 22) {
-      factor += 0.10;
-      reasons.push('Nachtflug');
-    }
   }
 
   // ✨ NEU: Seasonal Pricing
@@ -332,7 +327,7 @@ function calculateDemandFactor(
   const day = departureTime.getUTCDate();
   const isXmas = (month === 12 && day >= 15) || (month === 1 && day <= 5);
   if (isXmas) {
-    factor += 0.15;
+    factor += 0.12;
     reasons.push('Weihnachten/Neujahr');
   }
 

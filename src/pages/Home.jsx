@@ -13,6 +13,8 @@ import { useAuth } from "../lib/AuthContext";
 import Login from "../components/Login";
 import Signup from "../components/Signup";
 import UserMenu from "../components/UserMenu";
+import { useCurrency } from "../lib/CurrencyContext";
+import AirportSearchInput from "../components/AirportSearchInput";
 
 // Mapbox Token
 mapboxgl.accessToken =
@@ -207,16 +209,12 @@ const buildGetSuggestions = (airports) => (input) => {
   const results = [];
   const seenIatas = new Set();
 
-  // 1) Spezial-Alias: mün / mü / lei / nyc / ...
+  // 1) Spezial-Alias
   Object.entries(SPECIAL_ALIAS_MAP).forEach(([iata, patterns]) => {
     const iataUpper = iata.toUpperCase();
     const matchesAlias = patterns.some((p) => {
       const normP = normalizeText(p);
-      return (
-        q === normP ||
-        q.startsWith(normP) ||
-        normP.startsWith(q)
-      );
+      return q === normP || q.startsWith(normP) || normP.startsWith(q);
     });
 
     if (matchesAlias) {
@@ -260,7 +258,7 @@ const buildGetSuggestions = (airports) => (input) => {
     }
   });
 
-  // 3) Fuzzy-Fallback (wenn noch wenig Treffer)
+  // 3) Fuzzy-Fallback
   if (results.length < 5 && q.length >= 3) {
     airports.forEach((a) => {
       if (!a) return;
@@ -286,7 +284,7 @@ const buildGetSuggestions = (airports) => (input) => {
     });
   }
 
-  // 4) Sortierung: Score → Popularität → City-Name
+  // 4) Sortierung
   results.sort((x, y) => {
     if (x.score !== y.score) return x.score - y.score;
     if (x.pop !== y.pop) return y.pop - x.pop;
@@ -297,7 +295,6 @@ const buildGetSuggestions = (airports) => (input) => {
 
   return results.slice(0, 30).map((r) => r.a);
 };
-
 
 // Distanzberechnung (Haversine)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -320,6 +317,7 @@ export default function Home() {
   const markersRef = useRef([]);
   const { isAuthenticated, profile } = useAuth();
   const navigate = useNavigate(); // für spätere Phasen
+  const { formatPrice } = useCurrency(); // ⬅️ NEU: Währung/Formatierung
 
   // EmailJS / Templates
   const emailServiceId =
@@ -353,7 +351,6 @@ export default function Home() {
   const [fromSuggestions, setFromSuggestions] = useState([]);
   const [toSuggestions, setToSuggestions] = useState([]);
 
-
   const showToast = (message, type = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -385,54 +382,49 @@ export default function Home() {
   });
 
   // Suggestions-Funktion auf Basis der geladenen Airports
-// Suggestions-Funktion auf Basis der geladenen Airports
-const getSuggestions = buildGetSuggestions(airports);
+  const getSuggestions = buildGetSuggestions(airports);
 
-// Airport-Auflösung: versucht erst exakte Treffer, dann Vorschläge
-const resolveAirport = (input) => {
-  if (!input) return null;
+  // Airport-Auflösung
+  const resolveAirport = (input) => {
+    if (!input) return null;
 
-  const trimmed = input.toString().trim();
-  const upper = trimmed.toUpperCase();
+    const trimmed = input.toString().trim();
+    const upper = trimmed.toUpperCase();
 
-  // 1) Exakter IATA-Treffer (z.B. "PMI", "BER", "LEJ")
-  let match =
-    airports.find((a) => (a.iata || "").toUpperCase() === upper) || null;
-  if (match) return match;
-
-  // 2) Exakter City-Treffer (z.B. "BERLIN", "PALMA DE MALLORCA")
-  match =
-    airports.find((a) => (a.city || "").toUpperCase() === upper) || null;
-  if (match) return match;
-
-  // 3) Falls der User "Palma de Mallorca (PMI)" o.ä. drin hat → IATA aus Klammer lesen
-  const iataMatch = trimmed.match(/\(([A-Z]{3})\)$/);
-  if (iataMatch) {
-    const code = iataMatch[1];
-    match =
-      airports.find((a) => (a.iata || "").toUpperCase() === code) || null;
+    // 1) Exakter IATA-Treffer
+    let match =
+      airports.find((a) => (a.iata || "").toUpperCase() === upper) || null;
     if (match) return match;
-  }
 
-  // 4) Vorschläge über unsere Fuzzy-Suche holen
-  const suggestions = getSuggestions(trimmed) || [];
-  if (suggestions.length === 0) return null;
+    // 2) Exakter City-Treffer
+    match =
+      airports.find((a) => (a.city || "").toUpperCase() === upper) || null;
+    if (match) return match;
 
-  // 4a) Wenn es nur EINEN Vorschlag gibt → nimm den
-  if (suggestions.length === 1) return suggestions[0];
+    // 3) IATA in Klammern
+    const iataMatch = trimmed.match(/\(([A-Z]{3})\)$/);
+    if (iataMatch) {
+      const code = iataMatch[1];
+      match =
+        airports.find((a) => (a.iata || "").toUpperCase() === code) || null;
+      if (match) return match;
+    }
 
-  // 4b) Wenn der User z.B. "PMI" geschrieben hat und das in der Liste ist → nimm genau den
-  const exactSuggestion = suggestions.find(
-    (a) => (a.iata || "").toUpperCase() === upper
-  );
-  if (exactSuggestion) return exactSuggestion;
+    // 4) Vorschläge über Fuzzy-Suche
+    const suggestions = getSuggestions(trimmed) || [];
+    if (suggestions.length === 0) return null;
 
-  // 4c) Wenn mehrere verschiedene Treffer und kein exakter Code → lieber "nicht eindeutig" statt falscher Kontinent
-  return null;
-};
+    if (suggestions.length === 1) return suggestions[0];
 
+    const exactSuggestion = suggestions.find(
+      (a) => (a.iata || "").toUpperCase() === upper
+    );
+    if (exactSuggestion) return exactSuggestion;
 
-  // Route berechnen (wird v.a. für Preis/Info bei Direktbuchung verwendet)
+    return null;
+  };
+
+  // Route berechnen
   const calculateRoute = (from, to) => {
     if (!from || !to) return null;
 
@@ -442,19 +434,15 @@ const resolveAirport = (input) => {
     let start = null;
     let dest = null;
 
-    // 1) Versuche direkten IATA-Match
     if (fromUpper.length === 3) {
       start = airports.find(
         (a) => (a.iata || "").toUpperCase() === fromUpper
       );
     }
     if (toUpper.length === 3) {
-      dest = airports.find(
-        (a) => (a.iata || "").toUpperCase() === toUpper
-      );
+      dest = airports.find((a) => (a.iata || "").toUpperCase() === toUpper);
     }
 
-    // 2) Falls das nicht klappt: resolveAirport (Alias/Fuzzy)
     if (!start) start = resolveAirport(from);
     if (!dest) dest = resolveAirport(to);
 
@@ -473,13 +461,12 @@ const resolveAirport = (input) => {
     return { distanceKm, durationHrs, start, dest };
   };
 
-    // Preisberechnung (Fallback, falls Pricing-Engine nicht greift)
+  // Preisberechnung (Fallback)
   const calculatePrice = (distanceKm, jet, roundtrip = false) => {
     if (!jet || !distanceKm || distanceKm <= 0) return 0;
 
     const typeKey = (jet.type || "").toLowerCase();
 
-    // Stundensätze pro Jet-Typ (Pi-mal-Daumen)
     const hourlyRateMap = {
       "very light jet": 2500,
       "light jet": 3000,
@@ -495,7 +482,6 @@ const resolveAirport = (input) => {
         ? Number(jet.price_per_hour)
         : hourlyRateMap[typeKey] || 3500;
 
-    // Cruise-Speed je Jet-Typ (km/h)
     const cruiseSpeedKmHMap = {
       "very light jet": 600,
       "light jet": 700,
@@ -510,7 +496,6 @@ const resolveAirport = (input) => {
 
     const rawFlightHours = distanceKm / cruiseSpeedKmH;
 
-    // Minimum-Blockzeiten (Abrechnung in vollen Blöcken)
     const minBlockMap = {
       "very light jet": 1.0,
       "light jet": 1.2,
@@ -526,7 +511,6 @@ const resolveAirport = (input) => {
 
     const baseFlightCost = flightHours * hourlyRate;
 
-    // Crew- & Handlingkosten (für Direktflug ohne großen Leerflug)
     let crewFee = 0;
     let landingFee = 0;
     if (distanceKm <= 1200) {
@@ -540,7 +524,6 @@ const resolveAirport = (input) => {
       landingFee = 1500;
     }
 
-    // Nachfrage-Faktor: Langstrecken & „Premium“ etwas teurer
     let demandFactor = 1.0;
     if (distanceKm >= 7000) demandFactor = 1.12;
     else if (distanceKm >= 4000) demandFactor = 1.08;
@@ -558,8 +541,7 @@ const resolveAirport = (input) => {
     return Math.round(total);
   };
 
-
-    // Schöne Anzeige für IATA -> "Stadt (IATA)"
+  // Schöne Anzeige für IATA -> "Stadt (IATA)"
   const formatAirportLabel = (input) => {
     if (!input) return "";
     const code = (input || "").toString().trim();
@@ -571,9 +553,8 @@ const resolveAirport = (input) => {
     if (airport) {
       return `${airport.city} (${airport.iata})`;
     }
-    return input; // Fallback, falls kein Match
+    return input;
   };
-
 
   // --------------------------------------------------
   // Daten laden (Empty Legs, Jets, Airports)
@@ -790,10 +771,9 @@ const resolveAirport = (input) => {
       el.style.height = "55px";
       el.style.cursor = "pointer";
 
-            const statusColor =
+      const statusColor =
         jet.status === "in_flight" ? "#6366f1" : "#10b981";
 
-      // ✨ NEU: Route-Zeile nur anzeigen, wenn Jet wirklich eine aktive Route hat
       const routeLine =
         jet.status === "in_flight" &&
         jet.flight_from_iata &&
@@ -827,7 +807,6 @@ const resolveAirport = (input) => {
           </div>
         </div>
       `;
-
 
       const popup = new mapboxgl.Popup({
         offset: 25,
@@ -896,6 +875,8 @@ const resolveAirport = (input) => {
         Math.floor((leg.availableUntil - new Date()) / (1000 * 60 * 60))
       );
 
+      // ❗ Hier bleiben die Preise im Popup weiter in EUR (Mapbox-HTML),
+      //   Währungsswitch machen wir im React-Teil (Modals etc.)
       const popupHtml = `
         <div style="padding: 10px; text-align: center; min-width: 180px; font-family: system-ui, sans-serif;">
           <div style="background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
@@ -988,7 +969,8 @@ const resolveAirport = (input) => {
       setRouteInfo(null);
     }
   }, [formData.from, formData.to, formData.roundtrip, airports, booking]);
-  // Direktbuchungs-Preis automatisch neu berechnen, wenn Route / Jet / Datum sich ändern
+
+  // Direktbuchungs-Preis automatisch neu berechnen
   useEffect(() => {
     const updatePrice = async () => {
       if (!routeInfo || !booking) {
@@ -1010,85 +992,80 @@ const resolveAirport = (input) => {
   ]);
 
   // --------------------------------------------------
-  // Handler
+  // Preis vom Backend holen (Pricing Engine V2)
   // --------------------------------------------------
-    // Preis vom Backend holen (Pricing Engine V2)
-// Preis vom Backend holen (Pricing Engine V2)
-const fetchDirectPrice = async (route, currentBooking) => {
-  if (!route || !currentBooking) return null;
+  const fetchDirectPrice = async (route, currentBooking) => {
+    if (!route || !currentBooking) return null;
 
-  // 🚫 Reichweiten-Check VOR dem Edge-Call
-  const jetRangeKm = currentBooking.range;
-  const distanceKm = route.distanceKm;
+    const jetRangeKm = currentBooking.range;
+    const distanceKm = route.distanceKm;
 
-  if (jetRangeKm && jetRangeKm > 0 && distanceKm > jetRangeKm) {
-    const msg = `Dieser Jet kann die Strecke nicht ohne Tankstopp fliegen (Reichweite ca. ${Math.round(
-      jetRangeKm
-    ).toLocaleString("de-DE")} km, Strecke ca. ${Math.round(
-      distanceKm
-    ).toLocaleString("de-DE")} km). Bitte wählen Sie einen Jet mit größerer Reichweite.`;
-
-    setDirectPrice(null);
-    setDirectPriceError(msg);
-    showToast(msg, "error"); // 🔔 Toast oben rechts
-
-    return null; // ➜ Edge Function wird gar nicht erst aufgerufen
-  }
-
-  try {
-    setDirectPriceLoading(true);
-    setDirectPriceError(null);
-
-    const { data, error } = await supabase.functions.invoke(
-      "direct-price-quote",
-      {
-        body: {
-          jetId: currentBooking.id,
-          fromIATA: route.start.iata,
-          toIATA: route.dest.iata,
-          passengers: parseInt(formData.passengers, 10) || 1,
-          dateTime: formData.dateTime,
-          roundtrip: formData.roundtrip,
-        },
-      }
-    );
-
-    // 👇 Kein hässliches "non-2xx status code" mehr,
-    // sondern eine saubere Fehlermeldung
-    if (error) {
-      console.error("Fehler beim Laden des Direktpreises (Edge):", error, data);
-      const backendMsg = data && data.error;
-      const msg =
-        backendMsg ||
-        "Fehler bei der Preiskalkulation. Bitte versuchen Sie es später erneut.";
+    if (jetRangeKm && jetRangeKm > 0 && distanceKm > jetRangeKm) {
+      const msg = `Dieser Jet kann die Strecke nicht ohne Tankstopp fliegen (Reichweite ca. ${Math.round(
+        jetRangeKm
+      ).toLocaleString("de-DE")} km, Strecke ca. ${Math.round(
+        distanceKm
+      ).toLocaleString(
+        "de-DE"
+      )} km). Bitte wählen Sie einen Jet mit größerer Reichweite.`;
 
       setDirectPrice(null);
       setDirectPriceError(msg);
       showToast(msg, "error");
+
       return null;
     }
 
-    if (!data || typeof data.price !== "number") {
-      throw new Error("Preis konnte nicht berechnet werden.");
+    try {
+      setDirectPriceLoading(true);
+      setDirectPriceError(null);
+
+      const { data, error } = await supabase.functions.invoke(
+        "direct-price-quote",
+        {
+          body: {
+            jetId: currentBooking.id,
+            fromIATA: route.start.iata,
+            toIATA: route.dest.iata,
+            passengers: parseInt(formData.passengers, 10) || 1,
+            dateTime: formData.dateTime,
+            roundtrip: formData.roundtrip,
+          },
+        }
+      );
+
+      if (error) {
+        console.error("Fehler beim Laden des Direktpreises (Edge):", error, data);
+        const backendMsg = data && data.error;
+        const msg =
+          backendMsg ||
+          "Fehler bei der Preiskalkulation. Bitte versuchen Sie es später erneut.";
+
+        setDirectPrice(null);
+        setDirectPriceError(msg);
+        showToast(msg, "error");
+        return null;
+      }
+
+      if (!data || typeof data.price !== "number") {
+        throw new Error("Preis konnte nicht berechnet werden.");
+      }
+
+      setDirectPrice(data.price);
+      return data.price;
+    } catch (err) {
+      console.error("Fehler beim Laden des Direktpreises:", err);
+      const msg = err.message || "Preis konnte nicht berechnet werden.";
+      setDirectPrice(null);
+      setDirectPriceError(msg);
+      showToast(msg, "error");
+      return null;
+    } finally {
+      setDirectPriceLoading(false);
     }
-
-    setDirectPrice(data.price);
-    return data.price;
-  } catch (err) {
-    console.error("Fehler beim Laden des Direktpreises:", err);
-    const msg = err.message || "Preis konnte nicht berechnet werden.";
-    setDirectPrice(null);
-    setDirectPriceError(msg);
-    showToast(msg, "error");
-    return null;
-  } finally {
-    setDirectPriceLoading(false);
-  }
-};
-
+  };
 
   const handleSelectAirport = (field, airport) => {
-    // Wir schreiben nur den IATA-Code ins Feld (z.B. "MUC", "LEJ")
     setFormData((prev) => ({
       ...prev,
       [field]: airport.iata,
@@ -1153,54 +1130,47 @@ const fetchDirectPrice = async (route, currentBooking) => {
         fromIATA: startAirport.iata,
         toIATA: destAirport.iata,
       });
-  } catch (err) {
-    console.error("Fehler beim Aufruf der AI-Function:", err);
+    } catch (err) {
+      console.error("Fehler beim Aufruf der AI-Function:", err);
 
-    let displayErrorMessage = "Ein unbekannter Serverfehler ist aufgetreten.";
+      let displayErrorMessage = "Ein unbekannter Serverfehler ist aufgetreten.";
+      const anyErr = err;
 
-    const anyErr = err;
+      if (anyErr && anyErr.context && anyErr.context.error) {
+        const backendError = anyErr.context.error;
 
-    // 1) Versuche, die Fehlermeldung aus dem Edge-Function-Body zu holen (falls vorhanden)
-    if (anyErr && anyErr.context && anyErr.context.error) {
-      const backendError = anyErr.context.error;
-
-      if (typeof backendError === "string") {
-        displayErrorMessage = backendError;
-      } else if (backendError.details) {
-        displayErrorMessage = backendError.details;
-      } else if (backendError.error) {
-        displayErrorMessage = backendError.error;
-      } else if (anyErr.message) {
+        if (typeof backendError === "string") {
+          displayErrorMessage = backendError;
+        } else if (backendError.details) {
+          displayErrorMessage = backendError.details;
+        } else if (backendError.error) {
+          displayErrorMessage = backendError.error;
+        } else if (anyErr.message) {
+          displayErrorMessage = anyErr.message;
+        }
+      } else if (anyErr && anyErr.message) {
         displayErrorMessage = anyErr.message;
       }
-    } else if (anyErr && anyErr.message) {
-      displayErrorMessage = anyErr.message;
+
+      if (
+        displayErrorMessage.includes("non-2xx status code") ||
+        displayErrorMessage.includes("FunctionsHttpError")
+      ) {
+        displayErrorMessage =
+          "Kein passender Jet gefunden. Vermutlich reicht die Jet-Reichweite oder Vorlaufzeit nicht aus. " +
+          "Bitte wähle eine andere Route, einen späteren Abflugzeitpunkt oder reduziere die Anforderungen.";
+      }
+
+      if (displayErrorMessage.includes("Kein passender Jet gefunden")) {
+        displayErrorMessage =
+          "Kein passender Jet gefunden. Prüfe Vorlaufzeit, Jet-Reichweite oder Sitzanzahl und passe deine Anfrage an.";
+      }
+
+      showToast(`❌ Fehler: ${displayErrorMessage}`, "error");
+      setSmartResult({ error: true, message: displayErrorMessage });
+    } finally {
+      setLoading(false);
     }
-
-    // 2) Spezieller Fall: Supabase meldet nur "non-2xx status code"
-    if (
-      displayErrorMessage.includes("non-2xx status code") ||
-      displayErrorMessage.includes("FunctionsHttpError")
-    ) {
-      // → Wir wissen: Die Edge Function hat 400 zurückgegeben,
-      //   meistens weil kein Jet die Strecke schafft / Vorlaufzeit etc.
-      displayErrorMessage =
-        "Kein passender Jet gefunden. Vermutlich reicht die Jet-Reichweite oder Vorlaufzeit nicht aus. " +
-        "Bitte wähle eine andere Route, einen späteren Abflugzeitpunkt oder reduziere die Anforderungen.";
-    }
-
-    // 3) Spezieller Text aus dem Backend noch einmal schön formulieren
-    if (displayErrorMessage.includes("Kein passender Jet gefunden")) {
-      displayErrorMessage =
-        "Kein passender Jet gefunden. Prüfe Vorlaufzeit, Jet-Reichweite oder Sitzanzahl und passe deine Anfrage an.";
-    }
-
-    showToast(`❌ Fehler: ${displayErrorMessage}`, "error");
-    setSmartResult({ error: true, message: displayErrorMessage });
-  } finally {
-    setLoading(false);
-  }
-
   };
 
   const handleSmartBookingSubmit = async () => {
@@ -1237,7 +1207,7 @@ const fetchDirectPrice = async (route, currentBooking) => {
         .single();
       if (dbError) throw dbError;
 
-             // E-Mail an Kunden
+      // E-Mail an Kunden
       try {
         const kundenParams = {
           recipient_email: bookingData.customer_email,
@@ -1320,8 +1290,6 @@ const fetchDirectPrice = async (route, currentBooking) => {
         );
       }
 
-
-
       const { error: jetUpdateError } = await supabase
         .from("jets")
         .update({ status: "wartung" })
@@ -1354,215 +1322,197 @@ const fetchDirectPrice = async (route, currentBooking) => {
     }
   };
 
-const handleDirectBooking = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError(null);
+  const handleDirectBooking = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  if (!isAuthenticated) {
-    showToast("Bitte zuerst anmelden, um anzufragen.", "error");
-    setShowLogin(true);
-    setLoading(false);
-    return;
-  }
+    if (!isAuthenticated) {
+      showToast("Bitte zuerst anmelden, um anzufragen.", "error");
+      setShowLogin(true);
+      setLoading(false);
+      return;
+    }
 
-  if (!routeInfo || !booking) {
-    setError("Buchungs- oder Routen-Infos fehlen.");
-    setLoading(false);
-    return;
-  }
+    if (!routeInfo || !booking) {
+      setError("Buchungs- oder Routen-Infos fehlen.");
+      setLoading(false);
+      return;
+    }
 
-  // -----------------------------
-  // VORLAUFZEIT CHECK
-  // -----------------------------
-  const departureTime = new Date(formData.dateTime);
-  const now = new Date();
-  const hoursUntilFlight = (departureTime - now) / 3600000;
-  const jetLeadTime = booking.lead_time_hours || 4;
+    const departureTime = new Date(formData.dateTime);
+    const now = new Date();
+    const hoursUntilFlight = (departureTime - now) / 3600000;
+    const jetLeadTime = booking.lead_time_hours || 4;
 
-  if (hoursUntilFlight < jetLeadTime) {
-    showToast(
-      `Fehler: Die Vorlaufzeit dieses Jets beträgt ${jetLeadTime} Stunden. Bitte wählen Sie eine spätere Uhrzeit.`,
-      "error"
+    if (hoursUntilFlight < jetLeadTime) {
+      showToast(
+        `Fehler: Die Vorlaufzeit dieses Jets beträgt ${jetLeadTime} Stunden. Bitte wählen Sie eine spätere Uhrzeit.`,
+        "error"
+      );
+      setLoading(false);
+      return;
+    }
+
+    const jetRangeKm = Number(booking.range) || 0;
+    const mainDistanceKm = routeInfo.distanceKm;
+
+    if (jetRangeKm > 0 && mainDistanceKm > jetRangeKm) {
+      showToast(
+        `Dieser Jet kann die Strecke nicht ohne Tankstopp fliegen (Reichweite ca. ${jetRangeKm.toFixed(
+          0
+        )} km, Strecke ca. ${mainDistanceKm.toFixed(
+          0
+        )} km). Bitte wählen Sie einen Jet mit größerer Reichweite.`,
+        "error"
+      );
+      setLoading(false);
+      return;
+    }
+
+    const finalPrice = calculatePrice(
+      mainDistanceKm,
+      booking,
+      formData.roundtrip
     );
-    setLoading(false);
-    return;
-  }
 
-  // -----------------------------
-  // NEU: REICHWEITEN CHECK
-  // -----------------------------
-  const jetRangeKm = Number(booking.range) || 0;
-  const mainDistanceKm = routeInfo.distanceKm;
+    const bookingData = {
+      company_id: booking.company_id,
+      jet_id: booking.id,
+      from_location: formData.from.toUpperCase(),
+      from_iata: routeInfo.start.iata,
+      to_location: formData.to.toUpperCase(),
+      to_iata: routeInfo.dest.iata,
+      departure_date: formData.dateTime,
+      return_date: formData.roundtrip ? formData.returnDate : null,
+      total_price: finalPrice,
+      status: "pending",
+      customer_name: formData.name,
+      customer_email: formData.email,
+      customer_phone: formData.phone,
+      jet_name: booking.name,
+      jet_type: booking.type,
+      passengers: parseInt(formData.passengers, 10),
+    };
 
-  if (jetRangeKm > 0 && mainDistanceKm > jetRangeKm) {
-    showToast(
-      `Dieser Jet kann die Strecke nicht ohne Tankstopp fliegen (Reichweite ca. ${jetRangeKm.toFixed(
-        0
-      )} km, Strecke ca. ${mainDistanceKm.toFixed(
-        0
-      )} km). Bitte wählen Sie einen Jet mit größerer Reichweite.`,
-      "error"
-    );
-    setLoading(false);
-    return;
-  }
+    try {
+      const { data: bookingEntry, error: dbError } = await supabase
+        .from("bookings")
+        .insert(bookingData)
+        .select()
+        .single();
 
-  // -----------------------------
-  // PREISBERECHNUNG
-  // -----------------------------
-  const finalPrice = calculatePrice(
-    mainDistanceKm,
-    booking,
-    formData.roundtrip
-  );
+      if (dbError) throw dbError;
 
-  const bookingData = {
-    company_id: booking.company_id,
-    jet_id: booking.id,
-    from_location: formData.from.toUpperCase(),
-    from_iata: routeInfo.start.iata,
-    to_location: formData.to.toUpperCase(),
-    to_iata: routeInfo.dest.iata,
-    departure_date: formData.dateTime,
-    return_date: formData.roundtrip ? formData.returnDate : null,
-    total_price: finalPrice,
-    status: "pending",
-    customer_name: formData.name,
-    customer_email: formData.email,
-    customer_phone: formData.phone,
-    jet_name: booking.name,
-    jet_type: booking.type,
-    passengers: parseInt(formData.passengers, 10),
+      // E-Mail an Kunden
+      try {
+        const kundenParams = {
+          recipient_email: bookingData.customer_email,
+          subject:
+            "Ihre JetOpti-Anfrage (" +
+            bookingEntry.id +
+            ") ist in Bearbeitung",
+          name_an: bookingData.customer_name,
+          nachricht:
+            "Vielen Dank für Ihre Anfrage (ID: " +
+            bookingEntry.id +
+            ") für die Route " +
+            bookingData.from_location +
+            " → " +
+            bookingData.to_location +
+            ". Wir prüfen die Verfügbarkeit bei der Charterfirma und melden uns in Kürze.",
+          route:
+            bookingData.from_location + " → " + bookingData.to_location,
+          jet_name: bookingData.jet_name,
+          departure_date: new Date(
+            bookingData.departure_date
+          ).toLocaleString("de-DE"),
+          customer_name: bookingData.customer_name,
+          customer_email: bookingData.customer_email,
+          customer_phone: bookingData.customer_phone || "N/A",
+          total_price: Number(bookingData.total_price).toLocaleString(),
+          booking_id: bookingEntry.id,
+        };
+
+        await emailjs.send(
+          emailServiceId,
+          templateGenerisch,
+          kundenParams,
+          emailPublicKey
+        );
+      } catch (emailError) {
+        console.warn(
+          "⚠️ E-Mail (Anfrage-Kunde) konnte nicht gesendet werden:",
+          emailError
+        );
+      }
+
+      // E-Mail an Charter
+      try {
+        const charterParams = {
+          recipient_email: "steron4@web.de",
+          subject:
+            "NEUE ANFRAGE (" +
+            bookingEntry.id +
+            "): " +
+            bookingData.from_location +
+            " → " +
+            bookingData.to_location,
+          name_an: "JetOpti Partner",
+          nachricht:
+            "Eine neue Buchungsanfrage ist eingetroffen. Bitte prüfen Sie die Details in Ihrem Dashboard und bestätigen oder lehnen Sie die Anfrage ab.",
+          route:
+            bookingData.from_location + " → " + bookingData.to_location,
+          jet_name: bookingData.jet_name,
+          departure_date: new Date(
+            bookingData.departure_date
+          ).toLocaleString("de-DE"),
+          customer_name: bookingData.customer_name,
+          customer_email: bookingData.customer_email,
+          customer_phone: bookingData.customer_phone || "N/A",
+          total_price: Number(bookingData.total_price).toLocaleString(),
+          booking_id: bookingEntry.id,
+        };
+
+        await emailjs.send(
+          emailServiceId,
+          templateGenerisch,
+          charterParams,
+          emailPublicKey
+        );
+      } catch (emailError) {
+        console.warn(
+          "⚠️ E-Mail (Anfrage-Charter) konnte nicht gesendet werden:",
+          emailError
+        );
+      }
+
+      await supabase
+        .from("jets")
+        .update({ status: "wartung" })
+        .eq("id", booking.id);
+
+      showToast("✅ Buchungsanfrage erfolgreich gesendet!", "success");
+      setBooking(null);
+      setRouteInfo(null);
+      setFormData((prev) => ({
+        ...prev,
+        from: "",
+        to: "",
+        dateTime: getDefaultDateTime(4),
+        returnDate: "",
+        roundtrip: false,
+        passengers: 1,
+      }));
+    } catch (err) {
+      console.error("Fehler bei Direktbuchung:", err);
+      showToast(`❌ Fehler: ${err.message}`, "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  try {
-    const { data: bookingEntry, error: dbError } = await supabase
-      .from("bookings")
-      .insert(bookingData)
-      .select()
-      .single();
-
-    if (dbError) throw dbError;
-
-    // --------------------------------------------------
-    // E-Mail an Kunden
-    // --------------------------------------------------
-    try {
-      const kundenParams = {
-        recipient_email: bookingData.customer_email,
-        subject:
-          "Ihre JetOpti-Anfrage (" +
-          bookingEntry.id +
-          ") ist in Bearbeitung",
-        name_an: bookingData.customer_name,
-        nachricht:
-          "Vielen Dank für Ihre Anfrage (ID: " +
-          bookingEntry.id +
-          ") für die Route " +
-          bookingData.from_location +
-          " → " +
-          bookingData.to_location +
-          ". Wir prüfen die Verfügbarkeit bei der Charterfirma und melden uns in Kürze.",
-        route:
-          bookingData.from_location + " → " + bookingData.to_location,
-        jet_name: bookingData.jet_name,
-        departure_date: new Date(
-          bookingData.departure_date
-        ).toLocaleString("de-DE"),
-        customer_name: bookingData.customer_name,
-        customer_email: bookingData.customer_email,
-        customer_phone: bookingData.customer_phone || "N/A",
-        total_price: Number(bookingData.total_price).toLocaleString(),
-        booking_id: bookingEntry.id,
-      };
-
-      await emailjs.send(
-        emailServiceId,
-        templateGenerisch,
-        kundenParams,
-        emailPublicKey
-      );
-    } catch (emailError) {
-      console.warn(
-        "⚠️ E-Mail (Anfrage-Kunde) konnte nicht gesendet werden:",
-        emailError
-      );
-    }
-
-    // --------------------------------------------------
-    // E-Mail an Charter
-    // --------------------------------------------------
-    try {
-      const charterParams = {
-        recipient_email: "steron4@web.de",
-        subject:
-          "NEUE ANFRAGE (" +
-          bookingEntry.id +
-          "): " +
-          bookingData.from_location +
-          " → " +
-          bookingData.to_location,
-        name_an: "JetOpti Partner",
-        nachricht:
-          "Eine neue Buchungsanfrage ist eingetroffen. Bitte prüfen Sie die Details in Ihrem Dashboard und bestätigen oder lehnen Sie die Anfrage ab.",
-        route:
-          bookingData.from_location + " → " + bookingData.to_location,
-        jet_name: bookingData.jet_name,
-        departure_date: new Date(
-          bookingData.departure_date
-        ).toLocaleString("de-DE"),
-        customer_name: bookingData.customer_name,
-        customer_email: bookingData.customer_email,
-        customer_phone: bookingData.customer_phone || "N/A",
-        total_price: Number(bookingData.total_price).toLocaleString(),
-        booking_id: bookingEntry.id,
-      };
-
-      await emailjs.send(
-        emailServiceId,
-        templateGenerisch,
-        charterParams,
-        emailPublicKey
-      );
-    } catch (emailError) {
-      console.warn(
-        "⚠️ E-Mail (Anfrage-Charter) konnte nicht gesendet werden:",
-        emailError
-      );
-    }
-
-    // --------------------------------------------------
-    // JET STATUS UPDATE
-    // --------------------------------------------------
-    await supabase
-      .from("jets")
-      .update({ status: "wartung" })
-      .eq("id", booking.id);
-
-    showToast("✅ Buchungsanfrage erfolgreich gesendet!", "success");
-    setBooking(null);
-    setRouteInfo(null);
-    setFormData((prev) => ({
-      ...prev,
-      from: "",
-      to: "",
-      dateTime: getDefaultDateTime(4),
-      returnDate: "",
-      roundtrip: false,
-      passengers: 1,
-    }));
-  } catch (err) {
-    console.error("Fehler bei Direktbuchung:", err);
-    showToast(`❌ Fehler: ${err.message}`, "error");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
-   const handleChange = (e) => {
+  const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     const newValue = type === "checkbox" ? checked : value;
 
@@ -1571,7 +1521,6 @@ const handleDirectBooking = async (e) => {
       [name]: newValue,
     }));
 
-    // Nur für Flughafenfelder: Vorschläge aktualisieren
     if (name === "from") {
       if (!newValue || newValue.trim().length === 0) {
         setFromSuggestions([]);
@@ -1587,8 +1536,6 @@ const handleDirectBooking = async (e) => {
     }
   };
 
-
-  
   // --------------------------------------------------
   // JSX / Render
   // --------------------------------------------------
@@ -1847,113 +1794,23 @@ const handleDirectBooking = async (e) => {
             {error && <div className="error-message">⚠️ {error}</div>}
 
             <form onSubmit={handleSmartRequest}>
-              <label htmlFor="smart-from">Startflughafen</label>
-<div style={{ position: "relative" }}>
-  <input
-  id="smart-from"
-  type="text"
-  name="from"
-  placeholder="z.B. FRA oder Frankfurt"
-  value={formatAirportLabel(formData.from)}
-  onChange={handleChange}
-  autoComplete="off"
+              <AirportSearchInput
+  label="Startflughafen"
+  placeholder="z.B. Leipzig oder LEJ"
+  value={formData.from}
+  airports={airports}
+  onChange={(iata) => setFormData((prev) => ({ ...prev, from: iata }))}
   required
 />
 
-
-  {fromSuggestions.length > 0 && (
-    <div
-      style={{
-        position: "absolute",
-        top: "100%",
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        background: "white",
-        borderRadius: "8px",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-        marginTop: "4px",
-        maxHeight: "260px",
-        overflowY: "auto",
-      }}
-    >
-      {fromSuggestions.map((a) => (
-        <button
-          type="button"
-          key={a.iata}
-          onClick={() => handleSelectAirport("from", a)}
-          style={{
-            width: "100%",
-            textAlign: "left",
-            padding: "8px 12px",
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-          }}
-        >
-          <div style={{ fontWeight: 600 }}>
-            {a.city || a.iata} ({a.iata})
-          </div>
-        </button>
-      ))}
-    </div>
-  )}
-</div>
-
-
-              <label htmlFor="smart-to">Zielflughafen</label>
-<div style={{ position: "relative" }}>
-  <input
-  id="smart-to"
-  type="text"
-  name="to"
-  placeholder="z.B. MUC oder München"
-  value={formatAirportLabel(formData.to)}
-  onChange={handleChange}
-  autoComplete="off"
+              <AirportSearchInput
+  label="Zielflughafen"
+  placeholder="z.B. Dubai (DXB) oder New York (JFK)"
+  value={formData.to}
+  airports={airports}
+  onChange={(iata) => setFormData((prev) => ({ ...prev, to: iata }))}
   required
 />
-
-
-  {toSuggestions.length > 0 && (
-    <div
-      style={{
-        position: "absolute",
-        top: "100%",
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        background: "white",
-        borderRadius: "8px",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-        marginTop: "4px",
-        maxHeight: "260px",
-        overflowY: "auto",
-      }}
-    >
-      {toSuggestions.map((a) => (
-        <button
-          type="button"
-          key={a.iata}
-          onClick={() => handleSelectAirport("to", a)}
-          style={{
-            width: "100%",
-            textAlign: "left",
-            padding: "8px 12px",
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-          }}
-        >
-          <div style={{ fontWeight: 600 }}>
-            {a.city || a.iata} ({a.iata})
-          </div>
-        </button>
-      ))}
-    </div>
-  )}
-</div>
-
 
               <label htmlFor="smart-date">Abflugdatum und -Uhrzeit</label>
               <input
@@ -2037,13 +1894,12 @@ const handleDirectBooking = async (e) => {
                   type="button"
                   className="cancel"
                   onClick={() => {
-  setSmartRequest(false);
-  setSmartResult(null);
-  setError(null);
-  setFromSuggestions([]);
-  setToSuggestions([]);
-}}
-
+                    setSmartRequest(false);
+                    setSmartResult(null);
+                    setError(null);
+                    setFromSuggestions([]);
+                    setToSuggestions([]);
+                  }}
                 >
                   Abbrechen
                 </button>
@@ -2080,10 +1936,15 @@ const handleDirectBooking = async (e) => {
                 <p>
                   💶 Gesamtpreis:{" "}
                   <strong>
-                    €{smartResult.price.toLocaleString()}
+                    {formatPrice(smartResult.price, { showBoth: true })}
                   </strong>{" "}
-                  (Min. €
-                  {smartResult.jet.min_booking_price?.toLocaleString()})
+                  (Min.{" "}
+                  {smartResult.jet.min_booking_price != null
+                    ? formatPrice(smartResult.jet.min_booking_price, {
+                        showBoth: true,
+                      })
+                    : "–"}
+                  )
                 </p>
                 <p className="discount-info">
                   ℹ️ Inkl. Anflugkosten • Der Jet fliegt zu dir!
@@ -2137,78 +1998,35 @@ const handleDirectBooking = async (e) => {
             {error && <div className="error-message">⚠️ {error}</div>}
 
             <form onSubmit={handleDirectBooking}>
-              {/* STARTFLUGHAFEN – Fixiert auf Jet-Standort */}
-{/* STARTFLUGHAFEN – fixiert auf Jet-Standort, nicht änderbar */}
-<label htmlFor="booking-from">Startflughafen</label>
-<input
-  id="booking-from"
-  type="text"
-  value={formatAirportLabel(formData.from)}
-  readOnly
-  style={{
-    backgroundColor: "#f3f4f6",
-    cursor: "not-allowed",
-    borderColor: "#d1d5db",
-    marginBottom: "16px",
-  }}
-/>
+              {/* STARTFLUGHAFEN – fixiert auf Jet-Standort, nicht änderbar */}
+              <label htmlFor="booking-from">Startflughafen</label>
+              <input
+                id="booking-from"
+                type="text"
+                value={formatAirportLabel(formData.from)}
+                readOnly
+                style={{
+                  backgroundColor: "#f3f4f6",
+                  cursor: "not-allowed",
+                  borderColor: "#d1d5db",
+                  marginBottom: "16px",
+                }}
+              />
 
-{/* ZIELFLUGHAFEN – gleiche schöne Vorschlagsliste wie im AI Jet Match */}
-<label htmlFor="booking-to">Zielflughafen</label>
-<div style={{ position: "relative" }}>
-  <input
-    id="booking-to"
-    type="text"
-    name="to"
-    placeholder="z.B. Dubai (DXB) oder New York (JFK)"
-    value={formatAirportLabel(formData.to)}
-    onChange={handleChange}
-    autoComplete="off"
-    required
-  />
-
-  {toSuggestions.length > 0 && (
-    <div
-      style={{
-        position: "absolute",
-        top: "100%",
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        background: "white",
-        borderRadius: "8px",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-        marginTop: "4px",
-        maxHeight: "260px",
-        overflowY: "auto",
-      }}
-    >
-      {toSuggestions.map((a) => (
-        <button
-          type="button"
-          key={a.iata}
-          onClick={() => handleSelectAirport("to", a)}
-          style={{
-            width: "100%",
-            textAlign: "left",
-            padding: "8px 12px",
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-          }}
-        >
-          <div style={{ fontWeight: 600 }}>
-            {a.city || a.iata} ({a.iata})
-          </div>
-        </button>
-      ))}
-    </div>
-  )}
-</div>
-
-
-
-
+              {/* ZIELFLUGHAFEN */}
+              <AirportSearchInput
+                label="Zielflughafen"
+                value={formData.to}
+                airports={airports}
+                onChange={(value) =>
+                  setFormData((prev) => ({ ...prev, to: value }))
+                }
+                onSelect={(airport) =>
+                  setFormData((prev) => ({ ...prev, to: airport.iata }))
+                }
+                placeholder="Dubai (DXB) oder New York (JFK)"
+                required
+              />
 
               <label htmlFor="booking-date">
                 Abflugdatum und -Uhrzeit
@@ -2301,7 +2119,7 @@ const handleDirectBooking = async (e) => {
                 onChange={handleChange}
               />
 
-                            {routeInfo && (
+              {routeInfo && (
                 <div className="route-summary">
                   <p>
                     ✈️ Distanz:{" "}
@@ -2318,14 +2136,21 @@ const handleDirectBooking = async (e) => {
                     )}
                     {!directPriceLoading && directPrice != null && (
                       <strong>
-                        €{directPrice.toLocaleString()}
+                        {formatPrice(directPrice, { showBoth: true })}
                       </strong>
                     )}
                     {!directPriceLoading && directPrice == null && (
                       <strong>–</strong>
                     )}{" "}
-                    (Min. €
-                    {booking.min_booking_price?.toLocaleString()})
+                    {booking.min_booking_price != null && (
+                      <>
+                        (Min.{" "}
+                        {formatPrice(booking.min_booking_price, {
+                          showBoth: true,
+                        })}
+                        )
+                      </>
+                    )}
                   </p>
                   {directPriceError && (
                     <p
@@ -2346,7 +2171,6 @@ const handleDirectBooking = async (e) => {
                 </div>
               )}
 
-
               <div className="buttons">
                 <button
                   type="submit"
@@ -2361,13 +2185,12 @@ const handleDirectBooking = async (e) => {
                   type="button"
                   className="cancel"
                   onClick={() => {
-  setBooking(null);
-  setRouteInfo(null);
-  setError(null);
-  setFromSuggestions([]);
-  setToSuggestions([]);
-}}
-
+                    setBooking(null);
+                    setRouteInfo(null);
+                    setError(null);
+                    setFromSuggestions([]);
+                    setToSuggestions([]);
+                  }}
                 >
                   Abbrechen
                 </button>
@@ -2420,10 +2243,12 @@ const handleDirectBooking = async (e) => {
                     </div>
                     <div className="leg-pricing">
                       <span className="old-price">
-                        €{leg.normalPrice.toLocaleString()}
+                        {formatPrice(leg.normalPrice, { showBoth: true })}
                       </span>
                       <span className="new-price">
-                        €{leg.discountedPrice.toLocaleString()}
+                        {formatPrice(leg.discountedPrice, {
+                          showBoth: true,
+                        })}
                       </span>
                     </div>
                     <div className="leg-countdown">
@@ -2486,12 +2311,14 @@ const handleDirectBooking = async (e) => {
               </p>
               <p className="price-comparison">
                 <span className="old-price-large">
-                  €
-                  {selectedEmptyLeg.normalPrice.toLocaleString()}
+                  {formatPrice(selectedEmptyLeg.normalPrice, {
+                    showBoth: true,
+                  })}
                 </span>
                 <span className="new-price-large">
-                  €
-                  {selectedEmptyLeg.discountedPrice.toLocaleString()}
+                  {formatPrice(selectedEmptyLeg.discountedPrice, {
+                    showBoth: true,
+                  })}
                 </span>
               </p>
               <p className="discount-badge">

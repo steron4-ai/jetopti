@@ -199,3 +199,175 @@
     font-size: 15px;
   }
 }
+/* ============================================
+   HONEST FEATURES SECTION - STATUS BADGES
+============================================ */
+
+/* Status Badge on Feature Cards */
+.feature-status-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  z-index: 10;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Live/Available Badge */
+.feature-status-badge.live {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% {
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 25px rgba(16, 185, 129, 0.6);
+  }
+}
+
+/* Beta Badge */
+.feature-status-badge.beta {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+/* Coming Soon Badge */
+.feature-status-badge.coming-soon {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+  color: white;
+  animation: pulse-orange 2s infinite;
+}
+
+@keyframes pulse-orange {
+  0%, 100% {
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 25px rgba(255, 107, 107, 0.6);
+  }
+}
+
+/* Make sure feature cards are positioned relative */
+.features-section .feature-card {
+  position: relative;
+}
+
+/* ============================================
+   COMING SOON SECTION
+============================================ */
+
+.features-coming-soon {
+  margin-top: 100px;
+  padding: 60px 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 30px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+}
+
+.features-coming-soon h3 {
+  font-size: 2.5rem;
+  color: white;
+  margin-bottom: 50px;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+.coming-soon-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.coming-soon-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 30px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.coming-soon-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-5px);
+}
+
+.coming-soon-item .icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.coming-soon-item strong {
+  display: block;
+  color: white;
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.coming-soon-item p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ============================================
+   RESPONSIVE
+============================================ */
+
+@media (max-width: 768px) {
+  .feature-status-badge {
+    font-size: 10px;
+    padding: 6px 14px;
+    top: 15px;
+    right: 15px;
+  }
+
+  .features-coming-soon {
+    padding: 40px 20px;
+    margin-top: 60px;
+  }
+
+  .features-coming-soon h3 {
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+  }
+
+  .coming-soon-list {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .coming-soon-item {
+    padding: 20px;
+  }
+
+  .coming-soon-item .icon {
+    font-size: 2rem;
+  }
+
+  .coming-soon-item strong {
+    font-size: 1rem;
+  }
+
+  .coming-soon-item p {
+    font-size: 0.9rem;
+  }
+}
