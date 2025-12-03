@@ -6,26 +6,17 @@ import './index.css';
 import { AuthProvider } from './lib/AuthContext';
 import { CurrencyProvider } from './lib/CurrencyContext';
 
-// 🔥 KILL SWITCH: Löscht alte Service Worker, die Probleme machen
+// 🔥 KILL SWITCH: Löscht alte Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(function(registrations) {
     for(let registration of registrations) {
-      console.log('Service Worker gefunden und entfernt:', registration);
+      console.log('🗑️ Service Worker entfernt:', registration);
       registration.unregister();
     }
   });
-  // Erzwingt einen Reload, falls der Controller noch aktiv war (optional, aber sicher)
-  if (window.navigator && navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-  }
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
-
+// ✅ NUR EIN RENDER (mit Providern)
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <CurrencyProvider>
@@ -35,15 +26,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </CurrencyProvider>
   </React.StrictMode>,
 );
-// Register Service Worker for PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(registration => {
-        console.log('✅ SW registered:', registration);
-      })
-      .catch(error => {
-        console.log('❌ SW registration failed:', error);
-      });
-  });
-}
+
+console.log('💻 Development Mode: Kein Service Worker (kein White Screen)');

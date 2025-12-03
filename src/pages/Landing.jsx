@@ -3,6 +3,7 @@
 import { Link } from 'react-router-dom';
 import '../styles/Landing.css';
 import ContactForm from '../components/ContactForm';
+import InstallPWA from '../components/InstallPWA';
 
 export default function Landing() {
   // Scroll to contact form
@@ -56,7 +57,9 @@ export default function Landing() {
             AI-powered marketplace connecting charter companies with customers worldwide
           </p>
           <div className="hero-cta">
-            <button onClick={scrollToContact} className="btn-primary">
+  <InstallPWA />  {/* ← NEU! */}
+  
+  <button onClick={scrollToContact} className="btn-primary">
               Join Waitlist
             </button>
             <button onClick={scrollToContact} className="btn-secondary">
