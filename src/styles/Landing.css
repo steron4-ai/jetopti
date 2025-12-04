@@ -1789,7 +1789,7 @@ a.btn-secondary,
   color: white !important;
   border: none !important;
   border-radius: 14px !important;
-  padding: 16px 40px !important;
+  padding: 12px 40px !important;
   font-weight: 700 !important;
   transition: all 0.25s ease-out !important;
   box-shadow: 0 10px 25px rgba(0,0,0,0.20), 0 0 0 rgba(0,0,0,0);
@@ -1818,4 +1818,34 @@ a.btn-secondary:hover,
       0 0 18px var(--btn-glow) !important;
 
   background: linear-gradient(135deg, #8a3bff 0%, #ff20b9 100%) !important;
+}
+/* Register Button auf gleiche Breite wie Get in Touch setzen */
+.hero-cta button.btn-primary {
+  width: 190px !important;
+  text-align: center !important;
+}
+/* Alle drei Hero-Buttons gleich breit */
+.hero-cta > * {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+/* Register & Get in Touch: gleiche Breite */
+.hero-cta .btn-primary,
+.hero-cta .btn-secondary {
+  width: 190px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+
+/* Download App: breiter, damit einzeilig bleibt */
+.hero-cta .pwa-install-btn {
+  width: 230px !important;  /* anpassen falls nötig */
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
 }
