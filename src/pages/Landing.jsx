@@ -48,7 +48,7 @@ export default function Landing() {
         <div className="hero-content">
           {/* Coming Soon Badge */}
           <div className="coming-soon-badge">
-            🚀 Coming Soon - Join the Waitlist
+            
           </div>
           
           <img 
