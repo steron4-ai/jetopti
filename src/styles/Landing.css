@@ -1720,3 +1720,12 @@ button.btn-showcase-secondary:hover {
   border: none !important;
   box-shadow: 0 6px 20px rgba(123, 47, 247, 0.4) !important;
 }
+/* Register & Get in Touch gleiche Breite */
+.hero-cta .btn-primary,
+.hero-cta .btn-secondary {
+  width: 180px !important;    /* gleiche Breite */
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+}
