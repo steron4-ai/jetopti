@@ -308,8 +308,7 @@ export default function Landing() {
                   alt="Interactive Jet Map" 
                   className="screenshot-img"
                 />
-                <div className="screenshot-badge">Coming Soon</div>
-              </div>
+                              </div>
               <div className="screenshot-content">
                 <h3>🗺️ Interactive Map</h3>
                 <p>Real-time jet tracking across Europe and beyond. Filter by type, seats, and range. AI-powered matching finds your perfect jet instantly.</p>
@@ -329,7 +328,7 @@ export default function Landing() {
                   alt="Charter Company Dashboard" 
                   className="screenshot-img"
                 />
-                <div className="screenshot-badge">Coming Soon</div>
+                
               </div>
               <div className="screenshot-content">
                 <h3>📊 Smart Dashboard</h3>
@@ -349,7 +348,7 @@ export default function Landing() {
                   alt="Jet Details View" 
                   className="screenshot-img"
                 />
-                <div className="screenshot-badge">Coming Soon</div>
+                
               </div>
               <div className="screenshot-content">
                 <h3>✈️ Detailed Jet Info</h3>
@@ -369,7 +368,7 @@ export default function Landing() {
                   alt="AI Matching Result" 
                   className="screenshot-img"
                 />
-                <div className="screenshot-badge">Coming Soon</div>
+                
               </div>
               <div className="screenshot-content">
                 <h3>🎯 Perfect Match</h3>
@@ -389,7 +388,7 @@ export default function Landing() {
                   alt="Hot Deals Feature" 
                   className="screenshot-img"
                 />
-                <div className="screenshot-badge">Coming Soon</div>
+                
               </div>
               <div className="screenshot-content">
                 <h3>🔥 Hot Deals</h3>
