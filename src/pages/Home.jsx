@@ -11,10 +11,11 @@ import Footer from "../Footer";
 import { supabase, getAvailableJets } from "../lib/supabase";
 import { useAuth } from "../lib/AuthContext";
 import Login from "../components/Login";
-import Signup from "../components/Signup";
+import SignupModal from '../components/SignupModal';
 import UserMenu from "../components/UserMenu";
 import { useCurrency } from "../lib/CurrencyContext";
 import AirportSearchInput from "../components/AirportSearchInput";
+
 
 // Mapbox Token
 mapboxgl.accessToken =
@@ -2505,7 +2506,8 @@ export default function Home() {
         />
       )}
       {showSignup && (
-        <Signup
+        <SignupModal
+  isOpen={showSignup}
           onClose={() => setShowSignup(false)}
           onSwitchToLogin={() => {
             setShowSignup(false);

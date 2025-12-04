@@ -4,8 +4,11 @@ import { Link } from 'react-router-dom';
 import '../styles/Landing.css';
 import ContactForm from '../components/ContactForm';
 import InstallPWA from '../components/InstallPWA';
+import { useState } from 'react';
+import SignupModal from '../components/SignupModal';
 
 export default function Landing() {
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   // Scroll to contact form
   const scrollToContact = () => {
     document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
@@ -28,15 +31,16 @@ export default function Landing() {
         {/* Video Background */}
         <div className="hero-video-container">
           <video 
-            autoPlay 
-            loop 
-            muted 
-            playsInline
-            className="hero-video"
-          >
-            <source src="/videos/hero-video.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
+  poster="/images/hero-fallback.jpg"  // ← NEU!
+  autoPlay 
+  loop 
+  muted 
+  playsInline
+  className="hero-video"
+>
+  <source src="/videos/hero-video.mp4" type="video/mp4" />
+  Your browser does not support the video tag.
+</video>
           <div className="hero-video-overlay"></div>
         </div>
 
@@ -57,15 +61,22 @@ export default function Landing() {
             AI-powered marketplace connecting charter companies with customers worldwide
           </p>
           <div className="hero-cta">
-  <InstallPWA />  {/* ← NEU! */}
+  <InstallPWA />
   
-  <button onClick={scrollToContact} className="btn-primary">
-              Join Waitlist
-            </button>
-            <button onClick={scrollToContact} className="btn-secondary">
-              Get Early Access
-            </button>
-          </div>
+  <button 
+    onClick={() => setIsSignupModalOpen(true)} 
+    className="btn-primary"
+  >
+    Register
+  </button>
+  
+  <button 
+    onClick={scrollToContact} 
+    className="btn-secondary"
+  >
+    Get in Touch
+  </button>
+</div>
         </div>
       </section>
 
@@ -190,7 +201,7 @@ export default function Landing() {
           </div>
           <div className="coming-soon-content">
             <h4>🌍 Global Expansion</h4>
-            <p>Starting in USA (Florida & Texas) in Q2 2026</p>
+            <p>Expanding to international markets worldwide</p>
           </div>
         </div>
 
@@ -416,18 +427,7 @@ export default function Landing() {
 
           </div>
 
-          {/* CTA - NOW WAITLIST */}
-          <div className="showcase-cta">
-            <h3>Want to be first to try JetOpti?</h3>
-            <div className="showcase-cta-buttons">
-              <button onClick={scrollToContact} className="btn-showcase-primary">
-                Join Waitlist
-              </button>
-              <button onClick={scrollToContact} className="btn-showcase-secondary">
-                Get Early Access
-              </button>
-            </div>
-          </div>
+          
 
         </div>
       </section>
@@ -438,7 +438,7 @@ export default function Landing() {
       {/* FOOTER */}
       <footer className="footer">
         <div className="footer-content">
-          <p>© 2025 JetOpti. Made in Germany 🇩🇪</p>
+          <p>© 2025 JetOpti - Book Fast. Fly Smart.</p>
           <div className="footer-links">
             <a href="/impressum">Imprint</a>
             <a href="/datenschutz">Privacy</a>
@@ -446,6 +446,12 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Signup Modal */}
+      <SignupModal 
+        isOpen={isSignupModalOpen} 
+        onClose={() => setIsSignupModalOpen(false)} 
+      />
 
     </div>
   );

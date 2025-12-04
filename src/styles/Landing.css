@@ -339,19 +339,25 @@ body {
   box-shadow: 0 20px 60px rgba(102, 126, 234, 0.2);
 }
 
-/* Feature Image */
 .feature-image {
   width: 100%;
-  height: 240px;
+  aspect-ratio: 1 / 1;  /* ← 1:1 Format! */
   overflow: hidden;
-  position: relative;
+  border-radius: 20px;
+  margin-bottom: 25px;
+  background: #f0f0ff;
 }
 
 .feature-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  transition: transform 0.4s ease;
+  object-fit: cover;  /* ← Cover statt contain! */
+  object-position: center;
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover .feature-image img {
+  transform: scale(1.05);
 }
 
 .feature-card:hover .feature-image img {
