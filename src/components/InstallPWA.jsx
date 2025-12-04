@@ -10,17 +10,31 @@ export default function InstallPWA() {
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
+    // GA4: Track when PWA is installed
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setIsInstallable(false);
+      console.log("JetOpti PWA installed successfully!");
+
+      if (window.gtag) {
+        window.gtag("event", "pwa_installed", {
+          event_category: "pwa",
+          event_label: "jetopti_install_success"
+        });
+      }
+    };
+
+    // Already installed?
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
       return;
     }
 
-    // Check if iOS
+    // Detect iOS
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     setIsIOS(isIOSDevice);
 
-    // Listen for beforeinstallprompt event (Android/Desktop)
+    // Detect installability (Android / Desktop)
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -28,14 +42,6 @@ export default function InstallPWA() {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // Listen for app installed event
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setIsInstallable(false);
-      console.log('JetOpti PWA installed successfully!');
-    };
-
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
@@ -45,47 +51,38 @@ export default function InstallPWA() {
   }, []);
 
   const handleInstallClick = async () => {
+    // GA4: Track button clicks
+    if (window.gtag) {
+      window.gtag("event", "pwa_download_click", {
+        event_category: "engagement",
+        event_label: "download_app_button"
+      });
+    }
+
     if (isIOS) {
-      // Show iOS instructions
       setShowIOSInstructions(true);
       return;
     }
 
-    if (!deferredPrompt) {
-      return;
-    }
+    if (!deferredPrompt) return;
 
-    // Show install prompt
     deferredPrompt.prompt();
-
-    // Wait for user response
     const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
-      setIsInstalled(true);
+
+    if (outcome === "accepted") {
+      console.log("User accepted the install prompt");
     } else {
-      console.log('User dismissed the install prompt');
+      console.log("User dismissed the install prompt");
     }
 
-    // Clear the deferred prompt
     setDeferredPrompt(null);
     setIsInstallable(false);
   };
 
-  const closeIOSInstructions = () => {
-    setShowIOSInstructions(false);
-  };
+  const closeIOSInstructions = () => setShowIOSInstructions(false);
 
-  // Don't show button if already installed
-  if (isInstalled) {
-    return null;
-  }
-
-  // Show button if installable OR if iOS
-  if (!isInstallable && !isIOS) {
-    return null;
-  }
+  if (isInstalled) return null;
+  if (!isInstallable && !isIOS) return null;
 
   return (
     <>
@@ -110,11 +107,6 @@ export default function InstallPWA() {
                 <div className="ios-step-number">1</div>
                 <div className="ios-step-content">
                   <p>Tap the <strong>Share</strong> button</p>
-                  <div className="ios-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path d="M18 8l-1.41 1.41L18.17 11H8v2h10.17l-1.58 1.59L18 16l4-4-4-4zM6 8v8h2V8H6z" fill="currentColor"/>
-                    </svg>
-                  </div>
                 </div>
               </div>
 
