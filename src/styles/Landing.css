@@ -1708,3 +1708,114 @@ button.btn-showcase-secondary:hover {
     font-size: 1.1rem;
   }
 }
+/* === FORCE PWA INSTALL BUTTON TO PURPLE === */
+.pwa-install-btn,
+.pwa-install-btn * {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+}
+/* === FORCE ALL LANDING PAGE BUTTONS TO PURPLE === */
+
+.coming-soon-badge,
+.btn-primary,
+.btn-secondary,
+.btn-nav,
+.btn-primary-large,
+.btn-secondary-large,
+.btn-showcase-primary,
+.btn-showcase-secondary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+}
+
+.btn-secondary,
+.btn-secondary-large,
+.btn-showcase-secondary {
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+}
+/* === MAKE ALL BUTTONS MATCH THE REGISTER (PINK-LILA) GRADIENT === */
+
+.coming-soon-badge,
+.btn-primary,
+.btn-secondary,
+.btn-nav,
+.btn-primary-large,
+.btn-secondary-large,
+.btn-showcase-primary,
+.btn-showcase-secondary,
+.pwa-install-btn,
+.hero-cta button,
+.hero-cta a {
+  background: linear-gradient(135deg, #7b2ff7 0%, #f107a3 100%) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 6px 20px rgba(123, 47, 247, 0.4) !important;
+}
+
+/* Optional: Outline-Version (falls du Text-Buttons hast) */
+.btn-secondary,
+.btn-secondary-large,
+.btn-showcase-secondary {
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+}
+/* ============================================
+   GLOBAL BUTTON STYLE (Register Pink-Lila)
+============================================ */
+
+:root {
+  --btn-grad-start: #7b2ff7;
+  --btn-grad-end: #f107a3;
+  --btn-glow: rgba(241, 7, 163, 0.45);
+}
+
+button,
+a.btn-primary,
+a.btn-secondary,
+.btn-primary,
+.btn-secondary,
+.btn-nav,
+.btn-primary-large,
+.btn-secondary-large,
+.btn-showcase-primary,
+.btn-showcase-secondary,
+.pwa-install-btn,
+.hero-cta button,
+.hero-cta a {
+  background: linear-gradient(135deg, var(--btn-grad-start) 0%, var(--btn-grad-end) 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 14px !important;
+  padding: 16px 40px !important;
+  font-weight: 700 !important;
+  transition: all 0.25s ease-out !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.20), 0 0 0 rgba(0,0,0,0);
+  transform: translateY(0px);
+}
+
+/* ============================================
+   APPLE / STRIPE STYLE HOVER EFFECT
+============================================ */
+button:hover,
+a.btn-primary:hover,
+a.btn-secondary:hover,
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-nav:hover,
+.btn-primary-large:hover,
+.btn-secondary-large:hover,
+.btn-showcase-primary:hover,
+.btn-showcase-secondary:hover,
+.pwa-install-btn:hover,
+.hero-cta button:hover,
+.hero-cta a:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 
+      0 15px 35px rgba(0,0,0,0.30),
+      0 0 18px var(--btn-glow) !important;
+
+  background: linear-gradient(135deg, #8a3bff 0%, #ff20b9 100%) !important;
+}

@@ -4,12 +4,12 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './lib/AuthContext';
 
 // ============================================
-// LANDING PAGE (NEU!)
+// LANDING PAGE
 // ============================================
 import Landing from './pages/Landing';
 
 // ============================================
-// EXISTING PAGES (Von Gemini)
+// EXISTING PAGES
 // ============================================
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
@@ -147,40 +147,15 @@ function CustomerRoute({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
-    <Routes>
-  <Route path="/" element={<Landing />} />
-  <Route path="/map" element={<Home />} />
-  
-  {/* NEU: Legal Pages */}
-  <Route path="/imprint" element={<Imprint />} />
-  <Route path="/privacy" element={<Privacy />} />
-  <Route path="/terms" element={<Terms />} />
-  
-  {/* ... andere Routes */}
-</Routes>
       <Routes>
-        
-        {/* ========================================
-            PUBLIC ROUTES (Keine Auth nötig)
-        ======================================== */}
-        
-        {/* Landing Page - NEUE HOMEPAGE! */}
+        {/* PUBLIC ROUTES */}
         <Route path="/" element={<Landing />} />
-        
-        {/* Map View - Deine Karte (jetzt unter /map) */}
         <Route path="/map" element={<Home />} />
-        
-        {/* Login/Register kannst du später hinzufügen:
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        */}
+        <Route path="/imprint" element={<Imprint />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
 
-
-        {/* ========================================
-            PROTECTED ROUTES (Auth required)
-        ======================================== */}
-        
-        {/* Charter Company Dashboard */}
+        {/* PROTECTED ROUTES */}
         <Route 
           path="/dashboard" 
           element={
@@ -190,7 +165,6 @@ export default function App() {
           } 
         />
 
-        {/* Customer Bookings */}
         <Route 
           path="/my-bookings" 
           element={
@@ -198,34 +172,11 @@ export default function App() {
               <MyBookings />
             </CustomerRoute>
           } 
-          
         />
-        
 
-
-        {/* ========================================
-            FALLBACK - 404
-        ======================================== */}
-        
+        {/* FALLBACK */}
         <Route path="*" element={<Navigate to="/" replace />} />
-
       </Routes>
     </BrowserRouter>
   );
 }
-
-
-// ============================================
-// CSS ANIMATION (für Spinner)
-// ============================================
-// Füge das in deine index.css oder App.css ein:
-/*
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-*/
