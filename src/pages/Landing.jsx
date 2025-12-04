@@ -46,10 +46,7 @@ export default function Landing() {
 
         {/* Hero Content */}
         <div className="hero-content">
-          {/* Coming Soon Badge */}
-          <div className="coming-soon-badge">
-            
-          </div>
+         
           
           <img 
             src="/images/logo.png" 
