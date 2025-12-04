@@ -61,15 +61,15 @@ export default function Landing() {
             AI-powered marketplace connecting charter companies with customers worldwide
           </p>
           <div className="hero-cta">
-  <InstallPWA />
-  
   <button 
     onClick={() => setIsSignupModalOpen(true)} 
     className="btn-primary"
   >
     Register
   </button>
-  
+
+  <InstallPWA />
+
   <button 
     onClick={scrollToContact} 
     className="btn-secondary"
@@ -77,6 +77,7 @@ export default function Landing() {
     Get in Touch
   </button>
 </div>
+
         </div>
       </section>
 
