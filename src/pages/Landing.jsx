@@ -1,6 +1,6 @@
 // src/pages/Landing.jsx - COMING SOON VERSION
 
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';  // ← SCHON DA! ✅
 import '../styles/Landing.css';
 import ContactForm from '../components/ContactForm';
 import InstallPWA from '../components/InstallPWA';
@@ -413,15 +413,15 @@ export default function Landing() {
 
       {/* FOOTER */}
       <footer className="footer">
-        <div className="footer-content">
-          <p>© 2025 JetOpti - Book Fast. Fly Smart.</p>
-          <div className="footer-links">
-            <a href="/impressum">Imprint</a>
-            <a href="/datenschutz">Privacy</a>
-            <a href="/agb">Terms</a>
-          </div>
-        </div>
-      </footer>
+  <div className="footer-content">
+    <p>© 2025 JetOpti - Book Fast. Fly Smart.</p>
+    <div className="footer-links">
+      <Link to="/imprint">Imprint</Link>
+      <Link to="/privacy">Privacy</Link>
+      <Link to="/terms">Terms</Link>
+    </div>
+  </div>
+</footer>
 
       {/* Signup Modal */}
       <SignupModal 

@@ -14,6 +14,9 @@ import Landing from './pages/Landing';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import MyBookings from './pages/MyBookings';
+import Imprint from './pages/Imprint';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 
 
 // ============================================
@@ -144,6 +147,17 @@ function CustomerRoute({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+    <Routes>
+  <Route path="/" element={<Landing />} />
+  <Route path="/map" element={<Home />} />
+  
+  {/* NEU: Legal Pages */}
+  <Route path="/imprint" element={<Imprint />} />
+  <Route path="/privacy" element={<Privacy />} />
+  <Route path="/terms" element={<Terms />} />
+  
+  {/* ... andere Routes */}
+</Routes>
       <Routes>
         
         {/* ========================================
@@ -184,7 +198,9 @@ export default function App() {
               <MyBookings />
             </CustomerRoute>
           } 
+          
         />
+        
 
 
         {/* ========================================
