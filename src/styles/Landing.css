@@ -1702,3 +1702,21 @@ button.btn-showcase-secondary:hover {
     font-size: 1.1rem;
   }
 }
+/* === FORCE ALL LANDING PAGE BUTTONS TO USE THE REGISTER PINK-LILA GRADIENT === */
+
+.coming-soon-badge,
+.btn-primary,
+.btn-secondary,
+.btn-nav,
+.btn-primary-large,
+.btn-secondary-large,
+.btn-showcase-primary,
+.btn-showcase-secondary,
+.pwa-install-btn,
+.hero-cta button,
+.hero-cta a {
+  background: linear-gradient(135deg, #7b2ff7 0%, #f107a3 100%) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 6px 20px rgba(123, 47, 247, 0.4) !important;
+}
