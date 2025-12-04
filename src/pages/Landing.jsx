@@ -286,30 +286,7 @@ export default function Landing() {
 
           </div>
 
-          {/* Dual CTA - NOW WITH WAITLIST */}
-          <div className="how-cta-dual">
-            <div className="cta-column">
-              <h3>Charter Companies</h3>
-              <p>Join our network and reach more customers</p>
-              <button onClick={scrollToContact} className="btn-primary-large">
-                Join Waitlist
-              </button>
-              <p className="cta-subtitle">Be among the first to launch</p>
-            </div>
-            
-            <div className="cta-divider"></div>
-
-            <div className="cta-column">
-              <h3>Travelers</h3>
-              <p>Get notified when we launch</p>
-              <button onClick={scrollToContact} className="btn-secondary-large">
-                Get Early Access
-              </button>
-              <p className="cta-subtitle">Exclusive early bird discounts</p>
-            </div>
-          </div>
-
-        </div>
+                 </div>
       </section>
 
       {/* SCREENSHOT SHOWCASE SECTION */}
