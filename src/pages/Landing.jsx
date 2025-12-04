@@ -1,14 +1,26 @@
 // src/pages/Landing.jsx - COMING SOON VERSION
 
-import { Link } from 'react-router-dom';  // ← SCHON DA! ✅
+import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Landing.css';
 import ContactForm from '../components/ContactForm';
 import InstallPWA from '../components/InstallPWA';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SignupModal from '../components/SignupModal';
 
 export default function Landing() {
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Wenn PWA im Standalone-Modus auf "/" startet → automatisch nach /map weiterleiten
+  useEffect(() => {
+    const isStandalone = window.matchMedia &&
+      window.matchMedia('(display-mode: standalone)').matches;
+
+    if (isStandalone && window.location.pathname === '/') {
+      navigate('/map', { replace: true });
+    }
+  }, [navigate]);
+
   // Scroll to contact form
   const scrollToContact = () => {
     document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
@@ -16,6 +28,7 @@ export default function Landing() {
 
   return (
     <div className="landing-page">
+
       
       {/* NAVBAR - Hidden */}
       <nav className="navbar">
