@@ -9,27 +9,28 @@ function Imprint() {
         <h1>Imprint</h1>
         
         <section>
-          <h2>Information according to § 5 TMG</h2>
-          <p>
-            <strong>JetOpti</strong><br />
-            [Company Form - e.g. GmbH, UG, Sole Proprietorship]<br />
-            [Street and Number]<br />
-            [ZIP Code and City]<br />
-            Germany
+          <p className="note">
+            <em><strong>Note:</strong> JetOpti is currently in Beta/MVP phase operating as a lead generation platform. 
+            No direct charter services are provided at this stage. Full company registration will be 
+            completed before commercial operations begin.</em>
           </p>
         </section>
 
         <section>
-          <h2>Represented by</h2>
+          <h2>Information according to § 5 TMG</h2>
           <p>
-            [Managing Director/Owner Name]
+            <strong>JetOpti</strong><br />
+            Sole Proprietorship (planned registration)<br />
+            Ronny Stephan<br />
+            Blankenauer Straße 2<br />
+            09113 Chemnitz<br />
+            Germany
           </p>
         </section>
 
         <section>
           <h2>Contact</h2>
           <p>
-            Phone: [+49 XXX XXXXXXX]<br />
             Email: <a href="mailto:info@jetopti.com">info@jetopti.com</a><br />
             Website: <a href="https://jetopti.com">www.jetopti.com</a>
           </p>
@@ -37,24 +38,27 @@ function Imprint() {
 
         <section>
           <h2>Commercial Register</h2>
-          <p>
-            Entry in the Commercial Register<br />
-            Registration Court: [e.g. District Court Frankfurt]<br />
-            Registration Number: [HRB XXXXX]
-          </p>
           <p className="note">
-            <em>Note: Fill in after company registration. Not required for MVP/Beta phase.</em>
+            <em>Company registration will be completed upon first commercial bookings. 
+            During Beta phase, JetOpti operates as a lead generation platform only.</em>
           </p>
         </section>
 
         <section>
           <h2>VAT ID</h2>
-          <p>
-            VAT identification number according to § 27 a VAT Tax Act:<br />
-            DE [XXX XXX XXX]
-          </p>
           <p className="note">
-            <em>Note: Fill in after tax registration. Not required for MVP/Beta phase.</em>
+            <em>VAT registration will be completed upon company formation and commencement 
+            of commercial operations.</em>
+          </p>
+        </section>
+
+        <section>
+          <h2>Responsible for Content</h2>
+          <p>
+            Ronny Stephan<br />
+            Blankenauer Straße 2<br />
+            09113 Chemnitz<br />
+            Germany
           </p>
         </section>
 
@@ -86,6 +90,12 @@ function Imprint() {
             obligated as a service provider to monitor transmitted or stored third-party information or 
             to investigate circumstances that indicate illegal activity.
           </p>
+          <p>
+            Obligations to remove or block the use of information under general laws remain unaffected. 
+            However, liability in this regard is only possible from the time of knowledge of a specific 
+            legal violation. Upon becoming aware of corresponding legal violations, we will remove this 
+            content immediately.
+          </p>
         </section>
 
         <section>
@@ -93,7 +103,9 @@ function Imprint() {
           <p>
             Our website contains links to external third-party websites over whose content we have no 
             influence. Therefore, we cannot assume any liability for this external content. The respective 
-            provider or operator of the pages is always responsible for the content of the linked pages.
+            provider or operator of the pages is always responsible for the content of the linked pages. 
+            The linked pages were checked for possible legal violations at the time of linking. Illegal 
+            content was not recognizable at the time of linking.
           </p>
         </section>
 
@@ -102,7 +114,8 @@ function Imprint() {
           <p>
             The content and works created by the site operators on these pages are subject to German 
             copyright law. The duplication, processing, distribution, and any kind of exploitation outside 
-            the limits of copyright require the written consent of the respective author or creator.
+            the limits of copyright require the written consent of the respective author or creator. 
+            Downloads and copies of this site are only permitted for private, non-commercial use.
           </p>
         </section>
 
