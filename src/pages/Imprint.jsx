@@ -1,4 +1,4 @@
-// src/pages/Imprint.jsx
+// src/pages/Imprint.jsx - OPTIMIZED VERSION
 import React from 'react';
 import '../styles/Legal.css';
 
@@ -10,9 +10,10 @@ function Imprint() {
         
         <section>
           <p className="note">
-            <em><strong>Note:</strong> JetOpti is currently in Beta/MVP phase operating as a lead generation platform. 
-            No direct charter services are provided at this stage. Full company registration will be 
-            completed before commercial operations begin.</em>
+            <em><strong>Note:</strong> JetOpti is operated by Ronny Stephan as an early-stage startup 
+            project in Beta/MVP phase. The platform operates as a lead generation service only. 
+            A formal sole proprietorship (Einzelunternehmen) will be registered before commercial 
+            operations commence.</em>
           </p>
         </section>
 
@@ -20,8 +21,8 @@ function Imprint() {
           <h2>Information according to § 5 TMG</h2>
           <p>
             <strong>JetOpti</strong><br />
-            Sole Proprietorship (planned registration)<br />
-            Ronny Stephan<br />
+            Early-stage startup project<br />
+            Operated by: Ronny Stephan<br />
             Blankenauer Straße 2<br />
             09113 Chemnitz<br />
             Germany
@@ -39,8 +40,9 @@ function Imprint() {
         <section>
           <h2>Commercial Register</h2>
           <p className="note">
-            <em>Company registration will be completed upon first commercial bookings. 
-            During Beta phase, JetOpti operates as a lead generation platform only.</em>
+            <em>JetOpti currently operates as a pre-launch startup project. Formal business 
+            registration (Gewerbeanmeldung) and commercial register entry will be completed 
+            upon commencement of commercial operations with first bookings.</em>
           </p>
         </section>
 
@@ -48,7 +50,7 @@ function Imprint() {
           <h2>VAT ID</h2>
           <p className="note">
             <em>VAT registration will be completed upon company formation and commencement 
-            of commercial operations.</em>
+            of taxable commercial activities.</em>
           </p>
         </section>
 
@@ -59,6 +61,17 @@ function Imprint() {
             Blankenauer Straße 2<br />
             09113 Chemnitz<br />
             Germany
+          </p>
+        </section>
+
+        <section>
+          <h2>Aviation Services Disclaimer</h2>
+          <p className="note">
+            <em><strong>Important:</strong> JetOpti does not act as an air carrier, broker, or aviation 
+            service provider and does not hold an air operator certificate (AOC) or any aviation licenses. 
+            All aviation services are provided exclusively by licensed, independent charter companies. 
+            JetOpti serves solely as a lead generation platform connecting customers with certified 
+            aviation operators.</em>
           </p>
         </section>
 

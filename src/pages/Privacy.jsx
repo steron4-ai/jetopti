@@ -1,4 +1,4 @@
-// src/pages/Privacy.jsx
+// src/pages/Privacy.jsx - OPTIMIZED VERSION
 import React from 'react';
 import '../styles/Legal.css';
 
@@ -83,7 +83,7 @@ function Privacy() {
           </p>
           <ul>
             <li>Email address (for login and communication)</li>
-            <li>Password (encrypted storage)</li>
+            <li>Password (encrypted storage via Supabase)</li>
             <li>User type (charter company or customer)</li>
             <li>Company name or personal name</li>
             <li>Phone number (optional)</li>
@@ -91,6 +91,16 @@ function Privacy() {
           <p>
             <strong>Legal basis:</strong> Art. 6 para. 1 lit. b GDPR (contract performance)<br />
             <strong>Storage period:</strong> Until account deletion or statutory retention requirements apply.
+          </p>
+
+          <h3>Cookies & Tracking</h3>
+          <p>
+            <strong>JetOpti does not use cookies or tracking tools during the Beta phase.</strong>
+          </p>
+          <p>
+            We do not employ analytics services (Google Analytics, etc.), advertising cookies, or third-party 
+            tracking mechanisms. Your browsing behavior on our platform is not monitored or analyzed beyond 
+            standard server log files necessary for technical operation.
           </p>
 
           <h3>Server Log Files</h3>
@@ -119,6 +129,31 @@ function Privacy() {
         <section>
           <h2>4. External Services</h2>
           
+          <h3>EmailJS (Email Delivery Service)</h3>
+          <p>
+            We use EmailJS (EmailJS.com, operated by EmailJS Ltd.) to send booking confirmations, 
+            notifications, and responses to contact form submissions.
+          </p>
+          <p>
+            <strong>Data processed:</strong> When you submit a booking request or contact form, the 
+            following data is transmitted through EmailJS:
+          </p>
+          <ul>
+            <li>Your name</li>
+            <li>Email address</li>
+            <li>Message content (booking details, inquiry text)</li>
+            <li>Travel dates and route information (if applicable)</li>
+          </ul>
+          <p>
+            <strong>Legal basis:</strong> Art. 6 para. 1 lit. b GDPR (contractual communication and inquiry processing)<br />
+            <strong>Data location:</strong> EmailJS servers in the EU<br />
+            <strong>Data retention:</strong> EmailJS stores sent emails for up to 2 months for delivery verification<br />
+            Privacy Policy: 
+            <a href="https://www.emailjs.com/legal/privacy-policy/" target="_blank" rel="noopener noreferrer">
+              https://www.emailjs.com/legal/privacy-policy/
+            </a>
+          </p>
+
           <h3>Mapbox (Map Service)</h3>
           <p>
             We use the Mapbox map service to display interactive maps. The provider is 

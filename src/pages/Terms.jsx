@@ -1,4 +1,4 @@
-// src/pages/Terms.jsx
+// src/pages/Terms.jsx - OPTIMIZED VERSION
 import React from 'react';
 import '../styles/Legal.css';
 
@@ -17,6 +17,24 @@ function Terms() {
         </section>
 
         <section>
+          <h2>⚠️ Aviation Services Disclaimer - READ FIRST</h2>
+          <p className="note">
+            <em><strong>CRITICAL NOTICE:</strong> JetOpti does not act as an air carrier, air broker, 
+            tour operator, or aviation service provider. We do not hold an air operator certificate (AOC), 
+            aviation licenses, or any regulatory permits required to operate aircraft or provide aviation services.
+            <br /><br />
+            JetOpti serves exclusively as a <strong>lead generation platform</strong> that connects customers 
+            with licensed, independent charter companies. All aviation services, including flight operations, 
+            safety, insurance, and regulatory compliance, are provided solely by certified aviation operators 
+            who hold the necessary licenses and certifications.
+            <br /><br />
+            By using JetOpti, you acknowledge that any charter contracts are formed directly between you and 
+            the charter company, not with JetOpti. We are not a party to these contracts and bear no 
+            responsibility for aviation services.</em>
+          </p>
+        </section>
+
+        <section>
           <h2>1. Scope of Application</h2>
           <p>
             These Terms of Service ("Terms") govern the use of the JetOpti platform ("Platform"), 
@@ -26,7 +44,7 @@ function Terms() {
           <p>
             <strong>Current Status:</strong> JetOpti is currently in Beta/MVP phase. The Platform 
             operates as a lead generation service, connecting customers with charter companies. We do 
-            not provide aviation services directly.
+            not provide aviation services directly and hold no aviation licenses or certifications.
           </p>
         </section>
 
@@ -60,7 +78,8 @@ function Terms() {
           </ul>
           <p className="note">
             <em>During Beta: Charter companies undergo verification before listings become active. 
-            Beta participation is free of charge.</em>
+            Beta participation is free of charge. All participating charter companies must hold valid 
+            air operator certificates (AOC) or equivalent licenses.</em>
           </p>
         </section>
 
@@ -157,22 +176,27 @@ function Terms() {
             during Beta phase, with or without notice.
           </p>
 
-          <h3>7.2 Aviation Services</h3>
+          <h3>7.2 Aviation Services - Complete Exclusion of Liability</h3>
           <p>
-            <strong>JetOpti is not responsible for any aspect of aviation services, including but not limited to:</strong>
+            <strong>JetOpti has ZERO responsibility for any aspect of aviation services.</strong> 
+            This includes but is not limited to:
           </p>
           <ul>
-            <li>Flight safety or aircraft maintenance</li>
-            <li>Pilot qualifications or crew performance</li>
-            <li>Flight delays, cancellations, or route changes</li>
-            <li>Loss or damage to luggage or personal property</li>
-            <li>Any incidents, accidents, or injuries during charter flights</li>
-            <li>Compliance with aviation regulations</li>
-            <li>Insurance coverage</li>
+            <li>Flight safety, aircraft maintenance, and technical condition of aircraft</li>
+            <li>Pilot qualifications, crew training, or crew performance</li>
+            <li>Flight delays, cancellations, route changes, or diversions</li>
+            <li>Loss, damage, or delay of luggage or personal property</li>
+            <li>Any incidents, accidents, injuries, or fatalities during charter flights</li>
+            <li>Compliance with aviation regulations (EASA, national aviation authorities, etc.)</li>
+            <li>Insurance coverage or claims</li>
+            <li>Weather-related issues or force majeure events</li>
+            <li>Airport services, ground handling, or customs procedures</li>
           </ul>
           <p>
-            Charter companies are solely responsible for all aviation services and compliance with 
-            applicable aviation regulations (including EASA, national aviation authorities, etc.).
+            Charter companies are <strong>solely and exclusively responsible</strong> for all aviation 
+            services and compliance with applicable aviation regulations. All participating charter companies 
+            must hold valid air operator certificates (AOC) or equivalent licenses from competent aviation 
+            authorities.
           </p>
 
           <h3>7.3 Accuracy of Information</h3>
@@ -200,6 +224,7 @@ function Terms() {
             <li>Any conduct or content of third parties on the Platform</li>
             <li>Any content obtained from the Platform</li>
             <li>Unauthorized access to or alteration of your data</li>
+            <li>Any aviation services provided by charter companies</li>
           </ul>
         </section>
 
