@@ -1,72 +1,59 @@
-.app-footer {
+/* src/Footer.css */
+
+.map-footer-attribution {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
+  bottom: 5px;
+  right: 10px;
+  z-index: 1000;
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  z-index: 100;
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
-}
-
-.footer-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 12px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.footer-links {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.footer-link {
-  color: #7b2cbf;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  padding: 4px 8px;
+  padding: 5px 12px;
   border-radius: 4px;
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
-.footer-link:hover {
-  background: rgba(123, 44, 191, 0.1);
-  color: #6920ac;
+.map-footer-attribution span {
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.map-footer-attribution a {
+  color: rgba(0, 0, 0, 0.75);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.map-footer-attribution a:hover {
+  text-decoration: underline;
 }
 
 .footer-separator {
-  color: #ccc;
-  font-size: 12px;
+  margin: 0 5px;
+  color: rgba(0, 0, 0, 0.5);
 }
 
-.footer-copyright {
-  color: #666;
-  font-size: 13px;
+/* Responsive */
+@media (max-width: 768px) {
+  .map-footer-attribution {
+    font-size: 10px;
+    padding: 4px 10px;
+    bottom: 3px;
+    right: 5px;
+  }
 }
 
-/* Mobile Optimierung */
-@media (max-width: 600px) {
-  .footer-content {
+@media (max-width: 480px) {
+  .map-footer-attribution {
     flex-direction: column;
-    text-align: center;
-    padding: 10px 15px;
+    gap: 3px;
+    align-items: flex-start;
+    font-size: 9px;
   }
-
-  .footer-links {
-    order: 2;
-  }
-
-  .footer-copyright {
-    order: 1;
-    margin-bottom: 5px;
+  
+  .footer-separator {
+    display: none;
   }
 }
