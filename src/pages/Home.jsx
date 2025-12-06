@@ -728,217 +728,522 @@ export default function Home() {
     }
   }, [jets, emptyLegs]);
 
-  // Marker für Jets + Hot Deals
-  useEffect(() => {
-    if (!map.current) return;
+  // ======================================================================
+// NEUER CODE FÜR Home.jsx - ERSETZT DEN useEffect AB ZEILE 732
+// ======================================================================
 
-    // Alte Marker entfernen
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = [];
+// Marker für Jets + Hot Deals MIT CLUSTERING
+// ======================================================================
+// KOMPLETT GEFIXTER CODE FÜR Home.jsx - ERSETZT DEN useEffect AB ZEILE 732
+// Includes: Fix 1 (Koordinaten), Fix 2 (Dynamische Farbe), Fix 3 (Hot Deals zuerst)
+// ======================================================================
 
-    // 1) Jet-Marker
-    const jetsWithValidPositions = jets.filter((jet) => {
-      const lat = jet.current_lat;
-      const lng = jet.current_lng;
-      if (lat == null || lng == null) return false;
-      const latNum = Number(lat);
-      const lngNum = Number(lng);
-      if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return false;
-      return true;
-    });
+// Marker für Jets + Hot Deals MIT CLUSTERING
+useEffect(() => {
+  if (!map.current) return;
 
-    const visibleJets = jetsWithValidPositions.filter((jet) => {
-      const typeOk = filterType === "Alle Typen" || jet.type === filterType;
+  // Alte Marker entfernen
+  markersRef.current.forEach((marker) => marker.remove());
+  markersRef.current = [];
 
-      const seats = jet.seats || 0;
-      let seatsOk = true;
+  // ========================================
+  // 1. JETS VORBEREITEN
+  // ========================================
+  const jetsWithValidPositions = jets.filter((jet) => {
+    const lat = jet.current_lat;
+    const lng = jet.current_lng;
+    if (lat == null || lng == null) return false;
+    const latNum = Number(lat);
+    const lngNum = Number(lng);
+    if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return false;
+    return true;
+  });
 
-      if (filterSeats === "1–4") seatsOk = seats <= 4;
-      else if (filterSeats === "5–8") seatsOk = seats >= 5 && seats <= 8;
-      else if (filterSeats === "9–12") seatsOk = seats >= 9 && seats <= 12;
-      else if (filterSeats === "13+") seatsOk = seats > 12;
+  const visibleJets = jetsWithValidPositions.filter((jet) => {
+    const typeOk = filterType === "Alle Typen" || jet.type === filterType;
+    const seats = jet.seats || 0;
+    let seatsOk = true;
+    if (filterSeats === "1–4") seatsOk = seats <= 4;
+    else if (filterSeats === "5–8") seatsOk = seats >= 5 && seats <= 8;
+    else if (filterSeats === "9–12") seatsOk = seats >= 9 && seats <= 12;
+    else if (filterSeats === "13+") seatsOk = seats > 12;
+    return typeOk && seatsOk;
+  });
 
-      return typeOk && seatsOk;
-    });
+  // ========================================
+  // 2. GRUPPIERE NACH AIRPORT (IATA)
+  // ⭐ FIX 1: KORREKTE KOORDINATEN VON AIRPORTS!
+  // ========================================
+ const airportGroups = {};
 
-    visibleJets.forEach((jet) => {
-      const el = document.createElement("div");
-      el.className = "jet-marker";
-      el.style.backgroundImage = 'url("/jet.png")';
-      el.style.backgroundSize = "contain";
-      el.style.backgroundRepeat = "no-repeat";
-      el.style.backgroundPosition = "center";
-      el.style.width = "55px";
-      el.style.height = "55px";
-      el.style.cursor = "pointer";
+  // ZUERST: Füge Hot Deals hinzu (die haben korrekte Airport-Koordinaten!)
+  emptyLegs.forEach((leg) => {
+    const iata = leg.from;
+    if (!iata) return;
+    
+    if (!airportGroups[iata]) {
+      airportGroups[iata] = {
+        iata,
+        lat: leg.fromLat,      // ✅ KORREKTE Airport-Koordinaten vom Hot Deal!
+        lng: leg.fromLng,      // ✅ KORREKTE Airport-Koordinaten vom Hot Deal!
+        jets: [],
+        hotDeals: [],
+      };
+    }
+    airportGroups[iata].hotDeals.push(leg);
+  });
 
-      const statusColor =
-        jet.status === "in_flight" ? "#6366f1" : "#10b981";
+  // DANN: Füge Jets hinzu
+  visibleJets.forEach((jet) => {
+    const iata = jet.current_iata;
+    if (!iata) return;
+    
+    if (!airportGroups[iata]) {
+      // Wenn noch keine Gruppe existiert (kein Hot Deal):
+      // Nutze Jet-Koordinaten als Fallback
+      airportGroups[iata] = {
+        iata,
+        lat: Number(jet.current_lat),   // ⚠️ Fallback wenn kein Hot Deal
+        lng: Number(jet.current_lng),   // ⚠️ Fallback wenn kein Hot Deal
+        jets: [],
+        hotDeals: [],
+      };
+      console.warn(`⚠️ Airport ${iata}: Nutze Jet-Koordinaten (kein Hot Deal vorhanden)`);
+    }
+    airportGroups[iata].jets.push(jet);
+  });
 
-      const routeLine =
-        jet.status === "in_flight" &&
-        jet.flight_from_iata &&
-        jet.flight_to_iata
-          ? `<div style="margin-top: 4px; font-size: 0.85rem; color: #111;">
-               🛫 ${jet.flight_from_iata} → ${jet.flight_to_iata}
-             </div>`
-          : "";
+  // Filtere Groups ohne gültige Koordinaten
+  const validGroups = Object.values(airportGroups).filter(g => g.lat && g.lng);
 
-      const popupHtml = `
-        <div style="font-family: system-ui, sans-serif; text-align: center;">
-          <img
-            src="${jet.image_url || "/jets/default.jpg"}"
-            alt="${jet.name}"
-            style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px 6px 0 0; margin-bottom: 8px;">
-          <div style="padding: 0 10px 10px 10px;">
-            <strong style="font-size: 1.1rem; color: #111;">${jet.name}</strong><br/>
-            <span style="color: ${getJetColor(jet.type)}; font-weight: 600;">
-              ${jet.type}${jet.year_built ? ` (${jet.year_built})` : ""}
-            </span><br/>
-            ${routeLine}
-            <small style="color: #333;">
-              ${jet.current_iata} • ${jet.seats} Sitze • ${jet.range} km
-            </small><br/>
-            <small style="color: #333; font-weight: 600;">
-              ⏱️ ${jet.lead_time_hours}h Vorlaufzeit
-            </small><br/>
-            <span style="color: ${statusColor}; font-weight: 600; font-size: 0.9rem;">
-              ● ${jet.status}
-            </span>
-          </div>
+  console.log("✅ Valid Groups:", validGroups.map(g => `${g.iata}: ${g.jets.length} Jets + ${g.hotDeals.length} Hot Deals`));
+  // ========================================
+  // 3. ERSTELLE MARKER FÜR JEDEN AIRPORT
+  // ========================================
+  validGroups.forEach((group) => {
+    const totalCount = group.jets.length + group.hotDeals.length;
+    
+    // ----------------------------------------
+    // FALL A: NUR 1 ITEM → NORMALER MARKER
+    // ----------------------------------------
+    if (totalCount === 1) {
+      // Entweder 1 Jet ODER 1 Hot Deal
+      if (group.jets.length === 1) {
+        createSingleJetMarker(group.jets[0]);
+      } else {
+        createSingleHotDealMarker(group.hotDeals[0]);
+      }
+    }
+    // ----------------------------------------
+    // FALL B: 2+ ITEMS → CLUSTER-MARKER
+    // ----------------------------------------
+    else {
+      createClusterMarker(group);
+    }
+  });
+
+  // ========================================
+  // 4. HILFSFUNKTIONEN
+  // ========================================
+
+  // 4A: EINZELNER JET MARKER
+  function createSingleJetMarker(jet) {
+    const el = document.createElement("div");
+    el.className = "jet-marker";
+    el.style.backgroundImage = 'url("/jet.png")';
+    el.style.backgroundSize = "contain";
+    el.style.backgroundRepeat = "no-repeat";
+    el.style.backgroundPosition = "center";
+    el.style.width = "55px";
+    el.style.height = "55px";
+    el.style.cursor = "pointer";
+    el.style.zIndex = "100";  // ⭐ FIX 3: Z-Index für Jets
+
+    const statusColor = jet.status === "in_flight" ? "#6366f1" : "#10b981";
+    const routeLine =
+      jet.status === "in_flight" && jet.flight_from_iata && jet.flight_to_iata
+        ? `<div style="margin-top: 4px; font-size: 0.85rem; color: #111;">
+             🛫 ${jet.flight_from_iata} → ${jet.flight_to_iata}
+           </div>`
+        : "";
+
+    const popupHtml = `
+      <div style="font-family: system-ui, sans-serif; text-align: center;">
+        <img
+          src="${jet.image_url || "/jets/default.jpg"}"
+          alt="${jet.name}"
+          style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px 6px 0 0; margin-bottom: 8px;">
+        <div style="padding: 0 10px 10px 10px;">
+          <strong style="font-size: 1.1rem; color: #111;">${jet.name}</strong><br/>
+          <span style="color: ${getJetColor(jet.type)}; font-weight: 600;">
+            ${jet.type}${jet.year_built ? ` (${jet.year_built})` : ""}
+          </span><br/>
+          ${routeLine}
+          <small style="color: #333;">
+            ${jet.current_iata} • ${jet.seats} Sitze • ${jet.range} km
+          </small><br/>
+          <small style="color: #333; font-weight: 600;">
+            ⏱️ ${jet.lead_time_hours}h Vorlaufzeit
+          </small><br/>
+          <span style="color: ${statusColor}; font-weight: 600; font-size: 0.9rem;">
+            ● ${jet.status}
+          </span>
         </div>
-      `;
+      </div>
+    `;
 
-      const popup = new mapboxgl.Popup({
-        offset: 25,
-        closeButton: false,
-        closeOnClick: false,
-        className: "jet-popup",
-      }).setHTML(popupHtml);
+    const popup = new mapboxgl.Popup({
+      offset: 25,
+      closeButton: false,
+      closeOnClick: false,
+      className: "jet-popup",
+    }).setHTML(popupHtml);
 
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([Number(jet.current_lng), Number(jet.current_lat)])
-        .setPopup(popup)
-        .addTo(map.current);
+    const marker = new mapboxgl.Marker({
+      element: el,
+      anchor: 'center',
+  
+    })
+      .setLngLat([Number(jet.current_lng), Number(jet.current_lat)])
+      .setPopup(popup)
+      .addTo(map.current);
 
-      markersRef.current.push(marker);
+    markersRef.current.push(marker);
 
-      el.addEventListener("click", () => {
-        marker.getPopup().remove();
-        setBooking(jet);
-        setFormData((prev) => ({
-          ...prev,
-          from: jet.current_iata,
-          to: "",
-          name: profile ? profile.full_name || profile.company_name : "",
-          email: profile ? profile.email : "",
-          phone: "",
-          dateTime: getDefaultDateTime(jet.lead_time_hours || 4),
-          returnDate: "",
-          roundtrip: false,
-          passengers: 1,
-        }));
-        setRouteInfo(null);
+    el.addEventListener("click", () => {
+      marker.getPopup().remove();
+      setBooking(jet);
+      setFormData((prev) => ({
+        ...prev,
+        from: jet.current_iata,
+        to: "",
+        name: profile ? profile.full_name || profile.company_name : "",
+        email: profile ? profile.email : "",
+        phone: "",
+        dateTime: getDefaultDateTime(jet.lead_time_hours || 4),
+        returnDate: "",
+        roundtrip: false,
+        passengers: 1,
+      }));
+      setRouteInfo(null);
+    });
+
+    el.addEventListener("mouseenter", () => {
+      if (!marker.getPopup().isOpen()) {
+        marker.getPopup().addTo(map.current);
+      }
+    });
+    el.addEventListener("mouseleave", () => {
+      marker.getPopup().remove();
+    });
+  }
+
+  // 4B: EINZELNER HOT DEAL MARKER
+  function createSingleHotDealMarker(leg) {
+    const container = document.createElement("div");
+    container.style.width = "55px";
+    container.style.height = "55px";
+    container.style.zIndex = "200";  // ⭐ FIX 3: Höherer Z-Index für Hot Deals
+
+    const el = document.createElement("div");
+    el.style.backgroundImage = 'url("/jet1.png")';
+    el.style.backgroundSize = "contain";
+    el.style.backgroundRepeat = "no-repeat";
+    el.style.backgroundPosition = "center";
+    el.style.width = "100%";
+    el.style.height = "100%";
+    el.style.cursor = "pointer";
+    el.style.filter = "drop-shadow(0 6px 16px rgba(239, 68, 68, 0.8))";
+    el.style.transition = "transform 0.2s ease";
+
+    container.appendChild(el);
+
+    const hoursLeft = Math.max(
+      0,
+      Math.floor((leg.availableUntil - new Date()) / (1000 * 60 * 60))
+    );
+
+    const popupHtml = `
+      <div style="padding: 10px; text-align: center; min-width: 180px; font-family: system-ui, sans-serif;">
+        <div style="background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+                    color: white; padding: 4px 8px; border-radius: 6px;
+                    margin-bottom: 6px; font-weight: 700; font-size: 11px;">
+          🔥 HOT DEAL -${leg.discount}%
+        </div>
+        <strong style="font-size: 14px;">${leg.from} → ${leg.to}</strong><br/>
+        <span style="color: #7b2cbf; font-weight: 600;">${leg.jetName}</span><br/>
+        <small style="color: #666;">${leg.jetType} • ${leg.seats} Sitze</small><br/>
+        <div style="margin-top: 6px;">
+          <span style="text-decoration: line-through; color: #999; font-size: 12px;">
+            €${leg.normalPrice.toLocaleString()}
+          </span>
+          <span style="color: #ef4444; font-weight: 700; font-size: 16px; margin-left: 8px;">
+            €${leg.discountedPrice.toLocaleString()}
+          </span>
+        </div>
+        <small style="color: #f97316; font-weight: 600;">
+          ⏰ Noch ${hoursLeft}h verfügbar
+        </small>
+      </div>
+    `;
+
+    const popup = new mapboxgl.Popup({
+      offset: 25,
+      closeButton: false,
+      closeOnClick: false,
+    }).setHTML(popupHtml);
+
+    const marker = new mapboxgl.Marker(container)
+      .setLngLat([leg.fromLng, leg.fromLat])
+      .setPopup(popup)
+      .addTo(map.current);
+
+    markersRef.current.push(marker);
+
+    container.addEventListener("click", () => {
+      marker.getPopup().remove();
+      setSelectedEmptyLeg(leg);
+      setFormData((prev) => ({
+        ...prev,
+        passengers: 1,
+        name: profile ? profile.full_name || profile.company_name : "",
+        email: profile ? profile.email : "",
+        phone: "",
+      }));
+    });
+
+    container.addEventListener("mouseenter", () => {
+      el.style.transform = "scale(1.15)";
+      if (!marker.getPopup().isOpen()) {
+        marker.getPopup().addTo(map.current);
+      }
+    });
+    container.addEventListener("mouseleave", () => {
+      el.style.transform = "scale(1)";
+      marker.getPopup().remove();
+    });
+  }
+
+  // 4C: CLUSTER MARKER
+  function createClusterMarker(group) {
+    // ⭐ FIX 2: DYNAMISCHE FARBE basierend auf Hot Deal Präsenz
+    const hasHotDeals = group.hotDeals.length > 0;
+    const gradientColor = hasHotDeals
+      ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"  // ROT wenn Hot Deal
+      : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"; // LILA wenn nur Jets
+
+    // Wrapper für stabiles Rendering
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = `
+      width: 35px;
+      height: 35px;
+      position: relative;
+    `;
+
+    // Inner Element mit dynamischer Farbe
+    const el = document.createElement("div");
+    el.className = "cluster-marker";
+    el.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: ${gradientColor};
+      border: 3px solid white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: all 0.2s ease;
+      transform-origin: center center;
+    `;
+    el.textContent = group.jets.length + group.hotDeals.length;
+
+    wrapper.appendChild(el);
+
+    // POPUP MIT LISTE
+    let listHtml = `<div style="font-family: system-ui, sans-serif; min-width: 220px; max-width: 320px;">`;
+    listHtml += `<div style="font-weight: bold; font-size: 16px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">
+                   📍 ${group.iata} (${group.jets.length + group.hotDeals.length})
+                 </div>`;
+
+    // ⭐ FIX 3: HOT DEALS ZUERST!
+    if (group.hotDeals.length > 0) {
+      listHtml += `<div style="margin-bottom: 12px;">`;
+      listHtml += `<div style="font-weight: 600; color: #ef4444; margin-bottom: 6px;">🔥 Hot Deals:</div>`;
+      group.hotDeals.forEach((leg) => {
+        listHtml += `
+          <div class="cluster-hotdeal-item" data-hotdeal-id="${leg.id}" style="
+            padding: 8px;
+            margin-bottom: 4px;
+            background: #fef2f2;
+            border-radius: 6px;
+            cursor: pointer;
+            border-left: 3px solid #ef4444;
+            transition: background 0.2s;
+          ">
+            <div style="font-weight: 600; color: #111;">${leg.jetName}</div>
+            <div style="font-size: 12px; color: #666;">${leg.from} → ${leg.to} (-${leg.discount}%)</div>
+            <div style="font-size: 11px; color: #ef4444; font-weight: 600;">€${leg.discountedPrice.toLocaleString()}</div>
+          </div>
+        `;
       });
+      listHtml += `</div>`;
+    }
 
-      el.addEventListener("mouseenter", () => {
-        if (!marker.getPopup().isOpen()) {
-          marker.getPopup().addTo(map.current);
+    // DANN normale Jets
+    if (group.jets.length > 0) {
+      listHtml += `<div>`;
+      listHtml += `<div style="font-weight: 600; color: #10b981; margin-bottom: 6px;">✈️ Verfügbare Jets:</div>`;
+      group.jets.forEach((jet) => {
+        const statusColor = jet.status === "in_flight" ? "#6366f1" : "#10b981";
+        listHtml += `
+          <div class="cluster-jet-item" data-jet-id="${jet.id}" style="
+            padding: 8px;
+            margin-bottom: 4px;
+            background: #f9fafb;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+          ">
+            <div style="font-weight: 600; color: #111;">${jet.name}</div>
+            <div style="font-size: 12px; color: #666;">${jet.type} • ${jet.seats} Sitze</div>
+            <div style="font-size: 11px; color: ${statusColor}; font-weight: 600;">● ${jet.status}</div>
+          </div>
+        `;
+      });
+      listHtml += `</div>`;
+    }
+
+    listHtml += `</div>`;
+
+    // POPUP
+    const popup = new mapboxgl.Popup({
+      offset: 30,
+      closeButton: true,
+      closeOnClick: false,
+      maxWidth: "340px",
+      anchor: 'top',
+      className: 'cluster-popup',
+    }).setHTML(listHtml);
+
+    // ⭐ MARKER mit KORREKTEN Koordinaten vom Airport!
+    const marker = new mapboxgl.Marker({
+      element: wrapper,
+      anchor: 'center',
+      offset: [35, -40],
+    })
+      .setLngLat([group.lng, group.lat])  // ✅ Korrekte Airport-Koordinaten!
+      .setPopup(popup)
+      .addTo(map.current);
+
+    markersRef.current.push(marker);
+
+    // CLICK
+    wrapper.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      
+      // Schließe andere Popups
+      markersRef.current.forEach(m => {
+        if (m !== marker && m.getPopup()) {
+          m.getPopup().remove();
         }
       });
-      el.addEventListener("mouseleave", () => {
+      
+      // Toggle dieses Popup
+      if (marker.getPopup().isOpen()) {
         marker.getPopup().remove();
-      });
+      } else {
+        marker.getPopup().addTo(map.current);
+      }
     });
 
-    // 2) Hot Deals Marker
-    emptyLegs.forEach((leg) => {
-      const container = document.createElement("div");
-      container.style.width = "55px";
-      container.style.height = "55px";
+    // HOVER
+    el.addEventListener("mouseenter", () => {
+      el.style.transform = "scale(1.15)";
+      el.style.boxShadow = "0 6px 16px rgba(0,0,0,0.4)";
+    });
+    el.addEventListener("mouseleave", () => {
+      el.style.transform = "scale(1)";
+      el.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+    });
 
-      const el = document.createElement("div");
-      el.style.backgroundImage = 'url("/jet1.png")';
-      el.style.backgroundSize = "contain";
-      el.style.backgroundRepeat = "no-repeat";
-      el.style.backgroundPosition = "center";
-      el.style.width = "100%";
-      el.style.height = "100%";
-      el.style.cursor = "pointer";
-      el.style.filter =
-        "drop-shadow(0 6px 16px rgba(239, 68, 68, 0.8))";
-      el.style.transition = "transform 0.2s ease";
-
-      container.appendChild(el);
-
-      const hoursLeft = Math.max(
-        0,
-        Math.floor((leg.availableUntil - new Date()) / (1000 * 60 * 60))
-      );
-
-      // ❗ Hier bleiben die Preise im Popup weiter in EUR (Mapbox-HTML),
-      //   Währungsswitch machen wir im React-Teil (Modals etc.)
-      const popupHtml = `
-        <div style="padding: 10px; text-align: center; min-width: 180px; font-family: system-ui, sans-serif;">
-          <div style="background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
-                      color: white; padding: 4px 8px; border-radius: 6px;
-                      margin-bottom: 6px; font-weight: 700; font-size: 11px;">
-            🔥 HOT DEAL -${leg.discount}%
-          </div>
-          <strong style="font-size: 14px;">${leg.from} → ${leg.to}</strong><br/>
-          <span style="color: #7b2cbf; font-weight: 600;">${leg.jetName}</span><br/>
-          <small style="color: #666;">${leg.jetType} • ${leg.seats} Sitze</small><br/>
-          <div style="margin-top: 6px;">
-            <span style="text-decoration: line-through; color: #999; font-size: 12px;">
-              €${leg.normalPrice.toLocaleString()}
-            </span>
-            <span style="color: #ef4444; font-weight: 700; font-size: 16px; margin-left: 8px;">
-              €${leg.discountedPrice.toLocaleString()}
-            </span>
-          </div>
-          <small style="color: #f97316; font-weight: 600;">
-            ⏰ Noch ${hoursLeft}h verfügbar
-          </small>
-        </div>
-      `;
-
-      const popup = new mapboxgl.Popup({
-        offset: 25,
-        closeButton: false,
-        closeOnClick: false,
-      }).setHTML(popupHtml);
-
-      const marker = new mapboxgl.Marker(container)
-        .setLngLat([leg.fromLng, leg.fromLat])
-        .setPopup(popup)
-        .addTo(map.current);
-
-      markersRef.current.push(marker);
-
-      container.addEventListener("click", () => {
-        marker.getPopup().remove();
-        setSelectedEmptyLeg(leg);
-        setFormData((prev) => ({
-          ...prev,
-          passengers: 1,
-          name: profile ? profile.full_name || profile.company_name : "",
-          email: profile ? profile.email : "",
-          phone: "",
-        }));
+    // EVENT DELEGATION
+    popup.on("open", () => {
+      const popupEl = popup.getElement();
+      
+      // Click auf Hot Deal
+      popupEl.querySelectorAll(".cluster-hotdeal-item").forEach((item) => {
+        item.addEventListener("mouseenter", () => {
+          item.style.background = "#fee2e2";
+        });
+        item.addEventListener("mouseleave", () => {
+          item.style.background = "#fef2f2";
+        });
+        item.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const hotdealId = item.getAttribute("data-hotdeal-id");
+          const leg = group.hotDeals.find((h) => h.id === hotdealId);
+          if (leg) {
+            marker.getPopup().remove();
+            setSelectedEmptyLeg(leg);
+            setFormData((prev) => ({
+              ...prev,
+              passengers: 1,
+              name: profile ? profile.full_name || profile.company_name : "",
+              email: profile ? profile.email : "",
+              phone: "",
+            }));
+          }
+        });
       });
-
-      container.addEventListener("mouseenter", () => {
-        el.style.transform = "scale(1.15)";
-        if (!marker.getPopup().isOpen()) {
-          marker.getPopup().addTo(map.current);
-        }
-      });
-      container.addEventListener("mouseleave", () => {
-        el.style.transform = "scale(1)";
-        marker.getPopup().remove();
+      
+      // Click auf Jet
+      popupEl.querySelectorAll(".cluster-jet-item").forEach((item) => {
+        item.addEventListener("mouseenter", () => {
+          item.style.background = "#e0e7ff";
+        });
+        item.addEventListener("mouseleave", () => {
+          item.style.background = "#f9fafb";
+        });
+        item.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const jetId = item.getAttribute("data-jet-id");
+          const jet = group.jets.find((j) => j.id === jetId);
+          if (jet) {
+            marker.getPopup().remove();
+            setBooking(jet);
+            setFormData((prev) => ({
+              ...prev,
+              from: jet.current_iata,
+              to: "",
+              name: profile ? profile.full_name || profile.company_name : "",
+              email: profile ? profile.email : "",
+              phone: "",
+              dateTime: getDefaultDateTime(jet.lead_time_hours || 4),
+              returnDate: "",
+              roundtrip: false,
+              passengers: 1,
+            }));
+            setRouteInfo(null);
+          }
+        });
       });
     });
-  }, [filterType, filterSeats, jets, emptyLegs, profile]);
+  }
+
+}, [filterType, filterSeats, jets, emptyLegs, profile]);
+
+// ======================================================================
+// ENDE DES NEUEN CODES
+// ======================================================================
 
   // Route-Info berechnen, wenn im Direktbuchungs-Modal From/To gewählt sind
   useEffect(() => {
