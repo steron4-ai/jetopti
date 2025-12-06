@@ -1,21 +1,44 @@
 // supabase/functions/simulate-price/index.ts
-// ✅ Price Simulator V3 - Für Dashboard ohne JetId
-// Nutzt Unified Pricing Engine wie direct-price-quote
+// ✅ V5 FINAL: Erstellt Jet-Objekt für pricing-engine-FINAL.ts
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
-import {
-  calculatePrice,
-  calculateDistance,
-  getCruiseSpeed,
-  type Jet,
-  type Airport,
-} from '../_shared/pricing-engine.ts';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
-// ------------------------------------------------------------------
-// TYPES
-// ------------------------------------------------------------------
-interface RequestBody {
+console.log('simulate-price V5 FINAL started');
+
+// Diese Typen müssen mit pricing-engine.ts übereinstimmen
+interface Jet {
+  id: string;
+  name: string;
+  type: string;
+  seats: number;
+  range: number;
+  price_per_hour: number | null;
+  min_booking_price: number | null;
+  current_iata: string | null;
+}
+
+interface Airport {
+  iata: string;
+  city?: string;
+  lat: number;
+  lng: number;
+}
+
+interface PriceContext {
+  mainDistanceKm: number;
+  ferryDistanceKm?: number;
+  jet: Jet;
+  startAirport: Airport;
+  destAirport: Airport;
+  departureTime: Date;
+  now?: Date;
+  passengers?: number;
+  isEmptyLeg?: boolean;
+  isRoundtrip?: boolean;
+  enforceMinPrice?: boolean;
+}
+
+interface SimulateRequest {
   jetType: string;
   pricePerHour: number;
   minPrice: number;
@@ -23,203 +46,264 @@ interface RequestBody {
   toIATA: string;
   passengers: number;
   dateTime: string;
-  roundtrip: boolean;
+  roundtrip?: boolean;
+  
+  // FERRY-OPTIONEN
+  includeFerry?: boolean;
+  ferryFrom?: string;
+  ferryTo?: string;
 }
 
-// ------------------------------------------------------------------
-// HELPERS
-// ------------------------------------------------------------------
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+// Haversine Distanz-Berechnung
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Erdradius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
-function toNumber(v: unknown, fallback = 0): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
+// Airport-Daten holen (vereinfacht - in Produktion aus DB)
+async function getAirportData(iata: string): Promise<Airport | null> {
+  // In Produktion: aus Datenbank laden
+  // Für Simulator: temporäre Mock-Daten
+  const mockAirports: { [key: string]: Airport } = {
+    'FRA': { iata: 'FRA', city: 'Frankfurt', lat: 50.0379, lng: 8.5622 },
+    'LHR': { iata: 'LHR', city: 'London', lat: 51.4700, lng: -0.4543 },
+    'MUC': { iata: 'MUC', city: 'Munich', lat: 48.3538, lng: 11.7861 },
+    'PRG': { iata: 'PRG', city: 'Prague', lat: 50.1008, lng: 14.2632 },
+    'LEJ': { iata: 'LEJ', city: 'Leipzig', lat: 51.4239, lng: 12.2364 },
+    'DXB': { iata: 'DXB', city: 'Dubai', lat: 25.2532, lng: 55.3657 },
+    'CDG': { iata: 'CDG', city: 'Paris', lat: 49.0097, lng: 2.5479 },
+    'PMI': { iata: 'PMI', city: 'Palma', lat: 39.5517, lng: 2.7388 },
+  };
+  
+  return mockAirports[iata.toUpperCase()] || null;
 }
 
-// ------------------------------------------------------------------
-// MAIN HANDLER
-// ------------------------------------------------------------------
-Deno.serve(async (req) => {
-  // CORS Preflight
+// Dynamischer Import der pricing-engine
+const { calculatePrice } = await import('../_shared/pricing-engine.ts');
+
+serve(async (req) => {
+  // CORS Headers
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      },
+    });
   }
 
-  let body: RequestBody;
   try {
-    body = await req.json();
-  } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
-  }
+    const body: SimulateRequest = await req.json();
+    console.log('📦 Simulator Request:', body);
 
-  const {
-    jetType,
-    pricePerHour,
-    minPrice,
-    fromIATA,
-    toIATA,
-    passengers,
-    dateTime,
-    roundtrip,
-  } = body;
+    // Validierung
+    if (!body.jetType || !body.pricePerHour || !body.fromIATA || !body.toIATA) {
+      throw new Error('Fehlende Parameter');
+    }
 
-  // Validierung
-  if (!jetType || !fromIATA || !toIATA || !dateTime) {
-    return json(
-      { error: 'jetType, fromIATA, toIATA und dateTime sind Pflichtfelder.' },
-      400
-    );
-  }
-
-  if (pricePerHour <= 0) {
-    return json({ error: 'pricePerHour muss größer als 0 sein.' }, 400);
-  }
-
-  console.log('🧮 Price Simulator V3:', { 
-    jetType, 
-    pricePerHour, 
-    minPrice,
-    fromIATA, 
-    toIATA, 
-    passengers, 
-    roundtrip 
-  });
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-  // 1) Airports laden
-  const { data: airports, error: airportError } = await supabaseAdmin
-    .from('airports')
-    .select('iata, city, lat, lon')
-    .in('iata', [fromIATA.toUpperCase(), toIATA.toUpperCase()]);
-
-  if (airportError) {
-    console.error('[simulate-price] Airport-Error:', airportError);
-    return json({ error: 'Flughäfen konnten nicht geladen werden.' }, 500);
-  }
-
-  const findAirport = (iata: string): Airport | null => {
-    const found = (airports || []).find(
-      (a) => (a.iata || '').toUpperCase() === iata.toUpperCase()
-    );
-    if (!found) return null;
-    return {
-      iata: found.iata,
-      city: found.city,
-      lat: toNumber(found.lat),
-      lon: toNumber(found.lon),
+    // ✅ ERSTELLE JET-OBJEKT (kompatibel mit pricing-engine-FINAL.ts)
+    const mockJet: Jet = {
+      id: 'simulator-jet',
+      name: `${body.jetType} Simulator`,
+      type: body.jetType,
+      seats: body.passengers,
+      range: 5000, // Default range
+      price_per_hour: body.pricePerHour,
+      min_booking_price: body.minPrice,
+      current_iata: body.includeFerry ? body.ferryFrom : body.fromIATA,
     };
-  };
 
-  const startAirport = findAirport(fromIATA);
-  const destAirport = findAirport(toIATA);
+    console.log('✈️ Jet-Objekt erstellt:', mockJet);
 
-  if (!startAirport || !destAirport) {
-    return json(
-      { error: `Start- oder Zielflughafen nicht gefunden: ${fromIATA}, ${toIATA}` },
-      400
+    let result: any;
+
+    if (body.includeFerry && body.ferryFrom && body.ferryTo) {
+      // MIT FERRY
+      console.log('🔥 Ferry-Modus aktiviert');
+      console.log(`🛫 Ferry: ${body.ferryFrom} → ${body.ferryTo}`);
+      console.log(`🎯 Main: ${body.fromIATA} → ${body.toIATA}`);
+
+      // Hole Airport-Daten
+      const ferryStart = await getAirportData(body.ferryFrom);
+      const ferryDest = await getAirportData(body.ferryTo);
+      const mainStart = await getAirportData(body.fromIATA);
+      const mainDest = await getAirportData(body.toIATA);
+
+      if (!ferryStart || !ferryDest || !mainStart || !mainDest) {
+        throw new Error('Airport nicht gefunden');
+      }
+
+      // Berechne Distanzen
+      const ferryDistance = calculateDistance(
+        ferryStart.lat, ferryStart.lng,
+        ferryDest.lat, ferryDest.lng
+      );
+      const mainDistance = calculateDistance(
+        mainStart.lat, mainStart.lng,
+        mainDest.lat, mainDest.lng
+      );
+
+      console.log(`📏 Ferry-Distanz: ${Math.round(ferryDistance)} km`);
+      console.log(`📏 Main-Distanz: ${Math.round(mainDistance)} km`);
+
+      // ✅ BERECHNE MIT PRICING-ENGINE-FINAL.TS
+      const departureTime = new Date(body.dateTime);
+      const now = new Date();
+
+      const priceContext: PriceContext = {
+        ferryDistanceKm: ferryDistance,
+        mainDistanceKm: mainDistance,
+        jet: mockJet,
+        startAirport: mainStart,
+        destAirport: mainDest,
+        departureTime,
+        now,
+        passengers: body.passengers,
+        isRoundtrip: body.roundtrip || false,
+        enforceMinPrice: true,
+      };
+
+      const priceResult = calculatePrice(priceContext);
+
+      if (priceResult.totalPrice === Infinity) {
+        throw new Error('Jet außerhalb der Reichweite');
+      }
+
+      // Berechne Main ohne Ferry für Vergleich
+      const mainOnlyContext: PriceContext = {
+        mainDistanceKm: mainDistance,
+        jet: mockJet,
+        startAirport: mainStart,
+        destAirport: mainDest,
+        departureTime,
+        now,
+        passengers: body.passengers,
+        isRoundtrip: body.roundtrip || false,
+        enforceMinPrice: true,
+      };
+
+      const mainOnlyResult = calculatePrice(mainOnlyContext);
+      const ferryCost = priceResult.totalPrice - mainOnlyResult.totalPrice;
+
+      result = {
+        ok: true,
+        
+        // Ferry-Info
+        ferry: {
+          from: body.ferryFrom,
+          to: body.ferryTo,
+          distance_km: Math.round(ferryDistance),
+          block_hours: priceResult.breakdown.block_ferry_h.toFixed(1),
+          price: Math.round(ferryCost),
+        },
+        
+        // Main-Info
+        mainFlightPrice: Math.round(mainOnlyResult.totalPrice),
+        distances: {
+          main_km: Math.round(mainDistance),
+        },
+        timing: {
+          block_hours: priceResult.breakdown.block_main_h.toFixed(1),
+        },
+        roundtrip: body.roundtrip || false,
+        
+        // Total
+        totalPrice: Math.round(priceResult.totalPrice),
+        
+        // Vergleich
+        comparison: {
+          without_ferry: Math.round(mainOnlyResult.totalPrice),
+          ferry_cost: Math.round(ferryCost),
+          percent_increase: Math.round((ferryCost / mainOnlyResult.totalPrice) * 100),
+        },
+      };
+
+      console.log('✅ Gesamt mit Ferry:', result.totalPrice, '€');
+    } else {
+      // OHNE FERRY
+      console.log('📦 Standard-Modus (ohne Ferry)');
+
+      // Hole Airport-Daten
+      const startAirport = await getAirportData(body.fromIATA);
+      const destAirport = await getAirportData(body.toIATA);
+
+      if (!startAirport || !destAirport) {
+        throw new Error('Airport nicht gefunden');
+      }
+
+      // Berechne Distanz
+      const distance = calculateDistance(
+        startAirport.lat, startAirport.lng,
+        destAirport.lat, destAirport.lng
+      );
+
+      console.log(`📏 Distanz: ${Math.round(distance)} km`);
+
+      // ✅ BERECHNE MIT PRICING-ENGINE-FINAL.TS
+      const departureTime = new Date(body.dateTime);
+      const now = new Date();
+
+      const priceContext: PriceContext = {
+        mainDistanceKm: distance,
+        jet: mockJet,
+        startAirport,
+        destAirport,
+        departureTime,
+        now,
+        passengers: body.passengers,
+        isRoundtrip: body.roundtrip || false,
+        enforceMinPrice: true,
+      };
+
+      const priceResult = calculatePrice(priceContext);
+
+      if (priceResult.totalPrice === Infinity) {
+        throw new Error('Jet außerhalb der Reichweite');
+      }
+
+      result = {
+        ok: true,
+        distances: {
+          main_km: Math.round(distance),
+        },
+        timing: {
+          block_hours: priceResult.breakdown.block_total_h.toFixed(1),
+        },
+        roundtrip: body.roundtrip || false,
+        totalPrice: Math.round(priceResult.totalPrice),
+      };
+
+      console.log('✅ Standard berechnet:', result.totalPrice, '€');
+    }
+
+    return new Response(JSON.stringify(result), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Simulator Error:', error);
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        error: error.message || 'Interner Fehler',
+      }),
+      {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
     );
   }
-
-  // 2) Virtuellen Jet erstellen (aus Simulator-Parametern)
-  const virtualJet: Jet = {
-    id: 'simulator-virtual-jet',
-    name: `Simulator ${jetType}`,
-    type: jetType,
-    seats: 12, // Für Simulator irrelevant (wird nicht gecheckt)
-    range: 999999, // Unbegrenzte Reichweite im Simulator
-    price_per_hour: pricePerHour,
-    min_booking_price: minPrice,
-    lead_time_hours: 0, // Keine Lead-Time-Checks im Simulator
-    current_iata: fromIATA, // Jet steht am Startflughafen (kein Ferry)
-    current_lat: startAirport.lat,
-    current_lng: startAirport.lon,
-    allow_empty_legs: false,
-    empty_leg_discount: 0,
-  };
-
-  console.log('✅ Virtueller Jet erstellt:', virtualJet.type);
-
-  // 3) Distanz berechnen
-  const mainDistanceKm = calculateDistance(
-    startAirport.lat,
-    startAirport.lon,
-    destAirport.lat,
-    destAirport.lon
-  );
-
-  // Kein Ferry im Simulator (Jet steht immer am Start)
-  const ferryDistanceKm = 0;
-
-  console.log('📊 Distanz:', mainDistanceKm.toFixed(0), 'km');
-
-  // 4) Zeitberechnung
-  const departure = new Date(dateTime);
-  const now = new Date();
-
-  if (isNaN(departure.getTime())) {
-    return json({ error: 'Ungültiges dateTime Format.' }, 400);
-  }
-
-  // 5) Preis berechnen mit Unified Pricing Engine
-  const priceResult = calculatePrice({
-    mainDistanceKm,
-    ferryDistanceKm,
-    jet: virtualJet,
-    startAirport,
-    destAirport,
-    departureTime: departure,
-    now,
-    passengers: Math.max(1, toNumber(passengers, 1)),
-    isEmptyLeg: false,
-    isRoundtrip: !!roundtrip,
-    enforceMinPrice: true,
-  });
-
-  console.log('✅ Preis berechnet:', priceResult.totalPrice, '€');
-  console.log('📈 Breakdown:', priceResult.breakdown);
-
-  // 6) Blockzeit berechnen für Anzeige
-  const cruiseSpeed = getCruiseSpeed(virtualJet);
-  let blockHours = mainDistanceKm / cruiseSpeed + 0.4; // Taxi/Climb
-  if (roundtrip) {
-    blockHours *= 1.8; // Roundtrip-Aufschlag
-  }
-
-  // 7) Response
-  return json({
-    ok: true,
-    price: priceResult.totalPrice,
-    breakdown: priceResult.breakdown,
-    distances: {
-      main_km: Math.round(mainDistanceKm),
-      ferry_km: 0,
-    },
-    timing: {
-      block_hours: Math.round(blockHours * 10) / 10,
-    },
-    route: {
-      from: {
-        iata: startAirport.iata,
-        city: startAirport.city,
-      },
-      to: {
-        iata: destAirport.iata,
-        city: destAirport.city,
-      },
-    },
-    simulator_params: {
-      jet_type: jetType,
-      hourly_rate: pricePerHour,
-      min_price: minPrice,
-    },
-    roundtrip: !!roundtrip,
-  });
 });

@@ -8,9 +8,21 @@ import { useNavigate } from 'react-router-dom';
 import { MAP_ROUTE } from '../lib/routes';
 import emailjs from '@emailjs/browser';
 import './Dashboard.css';
+
 import Toast from '../components/Toast';
 import { useCurrency } from '../lib/CurrencyContext';
 import AirportSearchInput from '../components/AirportSearchInput';
+import PriceSimulatorV5 from '../components/PriceSimulator_V5';
+
+// ⭐ NEUE IMPORTS FÜR PROVISIONEN & MANUELLE HOT DEALS
+import {
+  AgreementSetup,
+  ManualHotDealModal,
+  HotDealsTabExtended
+} from '../components/CommissionComponents';
+
+// 💰 Separate robuste CommissionTab
+import CommissionTab from '../components/CommissionTab';
 
 
 // --- NEUE PROFIL-EDITOR KOMPONENTE ---
@@ -58,6 +70,8 @@ function ProfileEditor({ profile, onSave }) {
       </form>
     </div>
   );
+
+const [showAgreementSetup, setShowAgreementSetup] = useState(false);
 }
 // --- ENDE PROFIL-EDITOR ---
 
@@ -207,6 +221,28 @@ function JetForm({ onSubmit, onCancel, initialData = null, airports }) {
 
     const currentAirport = findAirport(formData.current_iata);
     const homeAirport = findAirport(formData.home_base_iata);
+
+    // Agreement Onboarding Modal
+if (showAgreementSetup) {
+  return (
+    <div className="dashboard">
+      <nav className="dashboard-nav">
+        <div className="nav-brand">
+          <span className="logo">✈️</span>
+          <span className="brand-name">JetOpti</span>
+        </div>
+      </nav>
+      
+      <AgreementSetup 
+        onSuccess={(agreement) => {
+          console.log('✅ Vertrag unterzeichnet:', agreement);
+          setShowAgreementSetup(false);
+          loadUserData(); // Reload
+        }}
+      />
+    </div>
+  );
+}
 
     if (!formData.name || !formData.type) {
       alert('Bitte Name und Typ ausfüllen.');
@@ -1413,6 +1449,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [airports, setAirports] = useState([]);
   const [toast, setToast] = useState(null);
+  const [agreement, setAgreement] = useState(null);
+const [showAgreementSetup, setShowAgreementSetup] = useState(false);
+const [showManualHotDealModal, setShowManualHotDealModal] = useState(false); // 🔥 NEU
+
 
     // ⛔ Falls Charterfirma noch nicht freigegeben ist: Blockscreen anzeigen
   if (profile?.role === 'charter_company' && profile?.is_approved === false) {
@@ -1511,6 +1551,46 @@ export default function Dashboard() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
+  const loadUserData = async () => {
+  try {
+    // 1. User laden
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+
+    const user = userData?.user;
+    if (!user) return;
+
+    // 2. Profil laden
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) throw profileError;
+
+    // 3. Firmen-Agreement prüfen (nur für Charterfirmen)
+    if (profileData?.role === 'charter_company') {
+      const { data: agreementData } = await supabase
+        .from('charter_agreements')
+        .select('id, status')
+        .eq('company_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      setAgreement(agreementData || null);
+
+      if (!agreementData) {
+        // Kein aktives Agreement → Setup anzeigen
+        setShowAgreementSetup(true);
+      }
+    }
+
+  } catch (error) {
+    console.error('Load Error:', error);
+  }
+};
+
 
  // Lade Flughäfen (NEU - aus Datenbank)
   useEffect(() => {
@@ -1598,6 +1678,11 @@ export default function Dashboard() {
       console.error('Fehler beim Laden der Empty Legs:', err);
     }
   }, [profile]);
+
+  // 🔥 NEU: User & Agreement beim Laden prüfen
+useEffect(() => {
+  loadUserData();
+}, []);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -2300,6 +2385,31 @@ if (destAirport) {
   );
 
   // Tabs definieren
+const tabConfig = [
+  { id: 'overview', label: 'Übersicht', icon: '📊' },
+  { id: 'jets', label: 'Jets', icon: '✈️', count: jets.length },
+  { id: 'bookings', label: 'Buchungen', icon: '📅', count: bookings.length },
+  { id: 'hotdeals', label: 'Hot Deals', icon: '🔥', count: 0 },
+  
+  // NEU:
+  { id: 'commissions', label: 'Abrechnungen', icon: '💰' },
+  
+  // ... rest ...
+];
+
+{/* NEU: Commission Tab */}
+{activeTab === 'commissions' && (
+  <CommissionTab />
+)}
+
+{/* ERWEITERT: Hot Deals Tab */}
+{activeTab === 'hotdeals' && (
+  <HotDealsTabExtended 
+    jets={jets}
+    airports={airports}
+  />
+)}
+
   const tabs = [
     { id: 'overview', label: 'Übersicht', icon: '📊' },
     { id: 'jets', label: 'Jets', icon: '✈️', badge: stats.totalJets },
@@ -2315,6 +2425,7 @@ if (destAirport) {
       icon: '🔥',
       badge: stats.activeEmptyLegs,
     },
+    { id: 'commissions', label: 'Abrechnung', icon: '💰' }, // 🔥 NEU
     { id: 'simulator', label: 'Preis-Simulator', icon: '🧮' },
     { id: 'profile', label: 'Profil', icon: '👤' },
   ];
@@ -2634,6 +2745,27 @@ if (destAirport) {
           <div className="empty-legs-section">
             <h2>🔥 Meine Hot Deals / Empty Legs</h2>
 
+             {/* 🔥 NEU: Button für manuellen Hot Deal */}
+    <div style={{ marginBottom: '16px', textAlign: 'right' }}>
+      <button
+        className="primary-button"
+        onClick={() => setShowManualHotDealModal(true)}
+        style={{
+          padding: '12px 24px',
+          background: '#10b981',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          fontWeight: '600',
+        }}
+      >
+        ✍️ Manuellen Hot Deal erstellen
+      </button>
+    </div>
+           
+
             <div
               style={{
                 background: '#fef2f2',
@@ -2826,10 +2958,17 @@ if (destAirport) {
           </div>
         )}
 
+         {/* 💰 ABRECHNUNG TAB */}
+        {activeTab === 'commissions' && (
+          <div className="commission-section">
+            <CommissionTab />
+          </div>
+        )}
+
                 {/* PREIS-SIMULATOR TAB */}
         {activeTab === 'simulator' && (
           <div className="simulator-section">
-            <PriceSimulator airports={airports} />
+           <PriceSimulatorV5 airports={airports} />
           </div>
         )}
 
@@ -2857,6 +2996,20 @@ if (destAirport) {
         )}
       </div>
 
+      {showAgreementSetup && (
+  <div className="modal-backdrop">
+    <div className="modal-content">
+      <AgreementSetup
+        onComplete={() => {
+          setShowAgreementSetup(false);
+          loadUserData(); // neu laden nach Abschluss
+        }}
+      />
+    </div>
+  </div>
+)}
+
+
       {/* MODALS */}
       {showAddModal && (
         <div className="modal-backdrop">
@@ -2882,6 +3035,24 @@ if (destAirport) {
           </div>
         </div>
       )}
+
+       {/* 🔥 NEU: Modal für manuellen Hot Deal */}
+      {showManualHotDealModal && (
+        <ManualHotDealModal
+          jets={jets}
+          airports={airports}
+          onClose={() => {
+            setShowManualHotDealModal(false);
+            loadEmptyLegs(); // Reload nach Erstellen
+          }}
+          onSuccess={() => {
+            setShowManualHotDealModal(false);
+            loadEmptyLegs();
+            setToast({ message: '🔥 Hot Deal erfolgreich erstellt!', type: 'success' });
+          }}
+        />
+      )}
+
 
       {toast && (
         <Toast
